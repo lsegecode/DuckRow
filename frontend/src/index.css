@@ -1,0 +1,186 @@
+@import "tailwindcss";
+
+/*
+ * Agile Ducks Service Desk — Mallard Duck Design System
+ *
+ * Color palette inspired by Mallard Duck feathers:
+ * - Obsidian Slate (#0B0F12) — extreme dark background
+ * - Mallard Teal (#0D5C4D) — primary accent
+ * - Beak Gold (#F2A900) — critical alerts
+ */
+
+@theme {
+  /* ── Core Palette ── */
+  --color-obsidian: #0B0F12;
+  --color-obsidian-light: #111820;
+  --color-obsidian-lighter: #1A2332;
+  --color-surface: #141E2B;
+  --color-surface-hover: #1C2A3A;
+  --color-surface-active: #243244;
+
+  --color-teal: #0D5C4D;
+  --color-teal-light: #0F7A66;
+  --color-teal-lighter: #12997F;
+  --color-teal-glow: #14B89A;
+  --color-teal-dim: #0A4A3E;
+
+  --color-gold: #F2A900;
+  --color-gold-light: #FFBF33;
+  --color-gold-dim: #C48A00;
+
+  /* ── Semantic Colors ── */
+  --color-text-primary: #E8ECF1;
+  --color-text-secondary: #8B95A5;
+  --color-text-muted: #5A6577;
+  --color-text-inverse: #0B0F12;
+
+  --color-border: #1E2D3D;
+  --color-border-light: #2A3B4D;
+  --color-border-focus: #0D5C4D;
+
+  /* ── Status Colors ── */
+  --color-status-open: #3B82F6;
+  --color-status-in-progress: #8B5CF6;
+  --color-status-resolved: #10B981;
+  --color-status-closed: #6B7280;
+
+  /* ── Urgency / Priority ── */
+  --color-urgency-low: #6B7280;
+  --color-urgency-medium: #F59E0B;
+  --color-urgency-high: #EF4444;
+  --color-priority-critical: #F2A900;
+
+  /* ── Typography ── */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* ── Spacing scale ── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* ── Shadows ── */
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-glow-teal: 0 0 20px rgba(13, 92, 77, 0.3);
+  --shadow-glow-gold: 0 0 20px rgba(242, 169, 0, 0.3);
+
+  /* ── Transitions ── */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Animations ── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(13, 92, 77, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(13, 92, 77, 0.5); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* ── Base Styles ── */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  background-color: var(--color-obsidian);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── Scrollbar Theming ── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-obsidian);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-light);
+}
+
+::selection {
+  background: rgba(13, 92, 77, 0.4);
+  color: var(--color-text-primary);
+}
+
+/* ── Focus Styles ── */
+:focus-visible {
+  outline: 2px solid var(--color-teal);
+  outline-offset: 2px;
+}
+
+/* ── Utility Animations ── */
+.animate-fade-in {
+  animation: fade-in var(--transition-base) ease-out;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left var(--transition-base) ease-out;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ── Glass Card ── */
+.glass-card {
+  background: linear-gradient(
+    135deg,
+    rgba(20, 30, 43, 0.8),
+    rgba(26, 35, 50, 0.6)
+  );
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  transition: border-color var(--transition-fast),
+              box-shadow var(--transition-fast);
+}
+
+.glass-card:hover {
+  border-color: var(--color-border-light);
+  box-shadow: var(--shadow-card), 0 0 0 1px rgba(13, 92, 77, 0.1);
+}
