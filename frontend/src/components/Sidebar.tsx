@@ -46,13 +46,13 @@ export default function Sidebar() {
     <aside className="fixed left-0 top-0 h-screen w-64 bg-obsidian-light border-r border-border flex flex-col z-50">
       {/* Logo */}
       <div className="p-6 border-b border-border">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-teal/20 flex items-center justify-center animate-float">
-            <DuckLogo />
+        <div className="flex flex-col gap-3">
+          <div className="w-full h-16 flex items-center justify-start animate-float">
+            <img src="/static/logo.png" alt="DuckRow" className="max-h-full object-contain" />
           </div>
           <div>
             <h1 className="text-lg font-bold text-text-primary tracking-tight">DuckRow</h1>
-            <p className="text-xs text-text-muted">Service Desk</p>
+            <p className="text-[11px] text-text-muted truncate">Keep your work in a row.</p>
           </div>
         </div>
       </div>

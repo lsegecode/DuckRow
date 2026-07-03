@@ -44,19 +44,11 @@ export default function LoginPage() {
       <div className="relative w-full max-w-md animate-fade-in">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-teal/10 border border-teal/20 mb-4 animate-float">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" className="text-teal-glow">
-              <path
-                d="M19.5 10.5c0-1.5-.5-3-1.5-4-1-1-2.5-2-4.5-2.5-.5-1.5-2-2.5-3.5-2.5-2 0-3.5 1.5-3.5 3.5 0 .3 0 .7.1 1C4.5 7 3 9 3 11.5c0 3 2 5.5 5 6.5v2c0 1.1.9 2 2 2h4c1.1 0 2-.9 2-2v-2c2.5-.8 4-3 4-5.5h-.5z"
-                fill="currentColor"
-                opacity="0.9"
-              />
-              <circle cx="8.5" cy="9" r="1" fill="#0B0F12" />
-              <path d="M12 11.5c.8 0 1.5.3 2 .8" stroke="#F2A900" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-            </svg>
+          <div className="inline-flex items-center justify-center w-56 h-32 mb-4 animate-float">
+            <img src="/static/logo.png" alt="DuckRow Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-bold text-text-primary tracking-tight">DuckRow</h1>
-          <p className="text-text-secondary mt-1">Service Desk — Sign in to your account</p>
+          <p className="text-text-secondary mt-1">Keep your work in a row. — Sign in to your account</p>
         </div>
 
         {/* Login Card */}
