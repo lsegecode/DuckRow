@@ -3,10 +3,13 @@
  */
 
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import LanguageSwitcher from './LanguageSwitcher';
 
 export default function Sidebar() {
   const { user, role, logout } = useAuth();
+  const { t } = useTranslation(['common']);
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -18,20 +21,20 @@ export default function Sidebar() {
     {
       to: '/dashboard',
       icon: DashboardIcon,
-      label: 'Dashboard',
+      labelKey: 'nav.dashboard',
       roles: ['CLIENT', 'RESOLVER', 'SYSADMIN'] as const,
     },
     {
       to: '/tickets',
       icon: TicketIcon,
-      label: 'Tickets',
+      labelKey: 'nav.tickets',
       roles: ['CLIENT', 'RESOLVER', 'SYSADMIN'] as const,
     },
     {
       to: '/tickets/new',
       icon: PlusIcon,
-      label: 'New Ticket',
-      roles: ['CLIENT', 'SYSADMIN'] as const,
+      labelKey: 'nav.new_ticket',
+      roles: ['CLIENT', 'RESOLVER', 'SYSADMIN'] as const,
     },
   ];
 
@@ -39,20 +42,23 @@ export default function Sidebar() {
     (item) => role && (item.roles as readonly string[]).includes(role),
   );
 
-  const roleLabel = role === 'SYSADMIN' ? 'Admin' : role === 'RESOLVER' ? 'Resolver' : 'Client';
+  const roleKey = role === 'SYSADMIN' ? 'roles.SYSADMIN_SHORT' : role === 'RESOLVER' ? 'roles.RESOLVER_SHORT' : 'roles.CLIENT_SHORT';
   const roleColor = role === 'SYSADMIN' ? 'text-gold' : role === 'RESOLVER' ? 'text-teal-glow' : 'text-text-secondary';
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-obsidian-light border-r border-border flex flex-col z-50">
-      {/* Logo */}
+      {/* Logo & Lang Switcher */}
       <div className="p-6 border-b border-border">
         <div className="flex flex-col gap-3">
-          <div className="w-full h-16 flex items-center justify-start animate-float">
-            <img src="/static/logo.png" alt="DuckRow" className="max-h-full object-contain" />
+          <div className="flex items-center justify-between">
+            <div className="w-28 h-12 flex items-center justify-start animate-float">
+              <img src="/static/logo.png" alt="DuckRow" className="max-h-full object-contain" />
+            </div>
+            <LanguageSwitcher variant="compact" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-text-primary tracking-tight">DuckRow</h1>
-            <p className="text-[11px] text-text-muted truncate">Keep your work in a row.</p>
+            <h1 className="text-lg font-bold text-text-primary tracking-tight">{t('app_name')}</h1>
+            <p className="text-[11px] text-text-muted truncate">{t('tagline')}</p>
           </div>
         </div>
       </div>
@@ -73,7 +79,7 @@ export default function Sidebar() {
             }
           >
             <item.icon />
-            {item.label}
+            {t(item.labelKey)}
           </NavLink>
         ))}
       </nav>
@@ -90,7 +96,7 @@ export default function Sidebar() {
                 {user?.first_name} {user?.last_name}
               </p>
               <p className={`text-xs font-semibold ${roleColor}`}>
-                {roleLabel}
+                {t(roleKey)}
               </p>
             </div>
           </div>
@@ -98,7 +104,7 @@ export default function Sidebar() {
             onClick={handleLogout}
             className="w-full px-3 py-2 text-xs font-medium text-text-secondary hover:text-urgency-high hover:bg-urgency-high/10 rounded-lg transition-all duration-[var(--transition-fast)] border border-transparent hover:border-urgency-high/20"
           >
-            Sign Out
+            {t('actions.sign_out')}
           </button>
         </div>
       </div>
@@ -107,20 +113,6 @@ export default function Sidebar() {
 }
 
 // ── Inline SVG Icons ──
-
-function DuckLogo() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-teal-glow">
-      <path
-        d="M19.5 10.5c0-1.5-.5-3-1.5-4-1-1-2.5-2-4.5-2.5-.5-1.5-2-2.5-3.5-2.5-2 0-3.5 1.5-3.5 3.5 0 .3 0 .7.1 1C4.5 7 3 9 3 11.5c0 3 2 5.5 5 6.5v2c0 1.1.9 2 2 2h4c1.1 0 2-.9 2-2v-2c2.5-.8 4-3 4-5.5h-.5z"
-        fill="currentColor"
-        opacity="0.9"
-      />
-      <circle cx="8.5" cy="9" r="1" fill="#0B0F12" />
-      <path d="M12 11.5c.8 0 1.5.3 2 .8" stroke="#F2A900" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-    </svg>
-  );
-}
 
 function DashboardIcon() {
   return (

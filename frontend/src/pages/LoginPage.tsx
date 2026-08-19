@@ -1,10 +1,12 @@
 /**
- * LoginPage — dark-themed login with duck branding.
+ * LoginPage — dark-themed login with duck branding and language selection.
  */
 
 import { useState, type FormEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -13,6 +15,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const { login } = useAuth();
+  const { t } = useTranslation(['auth', 'common']);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -27,7 +30,7 @@ export default function LoginPage() {
       await login({ username, password });
       navigate(from, { replace: true });
     } catch {
-      setError('Invalid credentials. Please check your username and password.');
+      setError(t('auth:invalid_credentials'));
     } finally {
       setIsLoading(false);
     }
@@ -42,13 +45,18 @@ export default function LoginPage() {
       </div>
 
       <div className="relative w-full max-w-md animate-fade-in">
+        {/* Language switch button top right */}
+        <div className="flex justify-end mb-3">
+          <LanguageSwitcher variant="compact" />
+        </div>
+
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-56 h-32 mb-4 animate-float">
             <img src="/static/logo.png" alt="DuckRow Logo" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-3xl font-bold text-text-primary tracking-tight">DuckRow</h1>
-          <p className="text-text-secondary mt-1">Keep your work in a row. — Sign in to your account</p>
+          <h1 className="text-3xl font-bold text-text-primary tracking-tight">{t('common:app_name')}</h1>
+          <p className="text-text-secondary mt-1">{t('common:tagline')} &mdash; {t('auth:signin_title')}</p>
         </div>
 
         {/* Login Card */}
@@ -62,7 +70,7 @@ export default function LoginPage() {
 
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-text-secondary mb-2">
-                Username
+                {t('auth:username_label')}
               </label>
               <input
                 id="username"
@@ -72,13 +80,13 @@ export default function LoginPage() {
                 required
                 autoFocus
                 className="w-full px-4 py-3 bg-obsidian border border-border rounded-xl text-text-primary placeholder-text-muted focus:border-teal focus:ring-1 focus:ring-teal/50 transition-all duration-[var(--transition-fast)] outline-none"
-                placeholder="Enter your username"
+                placeholder={t('auth:username_placeholder')}
               />
             </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-text-secondary mb-2">
-                Password
+                {t('auth:password_label')}
               </label>
               <input
                 id="password"
@@ -87,7 +95,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="w-full px-4 py-3 bg-obsidian border border-border rounded-xl text-text-primary placeholder-text-muted focus:border-teal focus:ring-1 focus:ring-teal/50 transition-all duration-[var(--transition-fast)] outline-none"
-                placeholder="Enter your password"
+                placeholder={t('auth:password_placeholder')}
               />
             </div>
 
@@ -99,10 +107,10 @@ export default function LoginPage() {
               {isLoading ? (
                 <span className="inline-flex items-center gap-2">
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Signing in...
+                  {t('auth:signing_in')}
                 </span>
               ) : (
-                'Sign In'
+                t('auth:sign_in_button')
               )}
             </button>
           </form>
@@ -110,7 +118,7 @@ export default function LoginPage() {
 
         {/* Footer hint */}
         <p className="text-center text-text-muted text-xs mt-6">
-          Agile Ducks Service Desk &middot; Keep your work in a row
+          {t('common:service_desk_title')} &middot; {t('common:tagline')}
         </p>
       </div>
     </div>

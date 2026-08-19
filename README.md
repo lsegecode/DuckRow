@@ -1,5 +1,8 @@
 # 🦆 DuckRow Service Desk
 
+[![English](https://img.shields.io/badge/Language-English-blue.svg)](README.md)
+[![Español](https://img.shields.io/badge/Idioma-Español-green.svg)](README.es.md)
+
 A modern, high-contrast, ticket-based task management application with a role-based permission system and guided debugging support, heavily inspired by the visual elements of a Mallard Duck combined with the software engineering philosophy of **"Rubber Ducking"**.
 
 ---
@@ -19,14 +22,16 @@ A modern, high-contrast, ticket-based task management application with a role-ba
 - **Database**: SQLite (Day-1, designed with UUIDv4 non-sequential primary keys for seamless PostgreSQL migration)
 - **Auth**: Stateless JWT (`djangorestframework-simplejwt`)
 - **Query filters**: `django-filter`
+- **Internationalization (i18n)**: Django `LocaleMiddleware` with GNU gettext catalogs (`.po` / `.mo`)
 - **Dynamic Scope Enforcement**: Configured at the ORM layer inside `get_queryset()` overrides.
 
 ### Frontend
 - **Framework**: React (Vite, TypeScript)
 - **CSS Engine**: Tailwind CSS v4 (with custom `@theme` properties)
+- **Internationalization (i18n)**: `i18next`, `react-i18next`, `i18next-browser-languagedetector` (Bilingual EN/ES support with runtime switcher)
 - **Routing**: `react-router-dom`
 - **State Management & Queries**: TanStack Query (React Query v5)
-- **HTTP Client**: Axios (configured with auto-refresh JWT interceptor)
+- **HTTP Client**: Axios (configured with auto-refresh JWT interceptor & `Accept-Language` header)
 
 ---
 
@@ -35,7 +40,7 @@ A modern, high-contrast, ticket-based task management application with a role-ba
 | Role | Create Ticket | View Context Scope | Update Internal Priority | Assign Staff |
 |---|---|---|---|---|
 | **System Administrator** (`SYSADMIN`) | Yes | Global Scope (All tickets) | Yes | Yes |
-| **Staff / Resolver** (`RESOLVER`) | No | Assigned Only (Personal queue) | No | No |
+| **Staff / Resolver** (`RESOLVER`) | Yes | Assigned & Created tickets | No | No |
 | **Client / Submitter** (`CLIENT`) | Yes | Area Restricted (Assigned departments) | No | No |
 
 *Note: For CLIENT users, internal fields like `internal_priority` and `assigned_to` are stripped out of the API serializers completely.*

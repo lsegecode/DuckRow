@@ -17,6 +17,7 @@ class TicketFilter(django_filters.FilterSet):
     and date ranges.
     """
 
+    ticket_type = django_filters.ChoiceFilter(choices=Ticket.TICKET_TYPE_CHOICES)
     status = django_filters.ChoiceFilter(choices=Ticket.STATUS_CHOICES)
     urgency = django_filters.ChoiceFilter(choices=Ticket.URGENCY_CHOICES)
     internal_priority = django_filters.ChoiceFilter(choices=Ticket.PRIORITY_CHOICES)
@@ -35,7 +36,7 @@ class TicketFilter(django_filters.FilterSet):
     class Meta:
         model = Ticket
         fields = [
-            'status', 'urgency', 'internal_priority',
+            'ticket_type', 'status', 'urgency', 'internal_priority',
             'source_area', 'assigned_to',
             'created_after', 'created_before',
         ]

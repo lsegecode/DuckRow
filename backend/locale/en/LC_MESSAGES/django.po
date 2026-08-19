@@ -1,0 +1,70 @@
+# DuckRow English Localization Catalog
+# Copyright (C) 2026 DuckRow
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: DuckRow 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-18 22:50-0300\n"
+"PO-Revision-Date: 2026-08-18 22:50-0300\n"
+"Last-Translator: DuckRow Team\n"
+"Language-Team: English\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "English"
+msgstr "English"
+
+msgid "Spanish"
+msgstr "Spanish"
+
+msgid "Low"
+msgstr "Low"
+
+msgid "Bug"
+msgstr "Bug"
+
+msgid "Feature"
+msgstr "Feature"
+
+msgid "Medium"
+msgstr "Medium"
+
+msgid "High"
+msgstr "High"
+
+msgid "Critical"
+msgstr "Critical"
+
+msgid "Open"
+msgstr "Open"
+
+msgid "In Progress"
+msgstr "In Progress"
+
+msgid "Resolved"
+msgstr "Resolved"
+
+msgid "Closed"
+msgstr "Closed"
+
+msgid "Client / Submitter"
+msgstr "Client / Submitter"
+
+msgid "Staff / Resolver"
+msgstr "Staff / Resolver"
+
+msgid "System Administrator"
+msgstr "System Administrator"
+
+msgid "Area not found."
+msgstr "Area not found."
+
+msgid "You can only create tickets within your assigned areas."
+msgstr "You can only create tickets within your assigned areas."
+
+msgid "User not found."
+msgstr "User not found."

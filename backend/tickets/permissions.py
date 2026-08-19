@@ -6,14 +6,14 @@ from rest_framework import permissions
 
 
 class CanCreateTicket(permissions.BasePermission):
-    """Only CLIENT and SYSADMIN roles can create tickets."""
+    """CLIENT, RESOLVER, and SYSADMIN roles can create tickets."""
 
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
         if not hasattr(request.user, 'profile'):
             return False
-        return request.user.profile.role in ('CLIENT', 'SYSADMIN')
+        return request.user.profile.role in ('CLIENT', 'RESOLVER', 'SYSADMIN')
 
 
 class CanUpdateTicket(permissions.BasePermission):

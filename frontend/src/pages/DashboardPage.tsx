@@ -1,10 +1,11 @@
 /**
  * DashboardPage — summary stats and recent tickets.
- * Role-aware: shows scoped data based on user role.
+ * Role-aware: shows scoped data based on user role with full i18n.
  */
 
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ticketsApi } from '../api/tickets';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/StatusBadge';
@@ -13,6 +14,7 @@ import type { Ticket } from '../types';
 
 export default function DashboardPage() {
   const { user, role } = useAuth();
+  const { t, i18n } = useTranslation(['dashboard', 'common', 'tickets']);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['ticket-stats'],
@@ -24,8 +26,8 @@ export default function DashboardPage() {
     queryFn: () => ticketsApi.list({ page: 1 }),
   });
 
-  const greeting = getGreeting();
-  const roleLabel = role === 'SYSADMIN' ? 'System Administrator' : role === 'RESOLVER' ? 'Staff / Resolver' : 'Client';
+  const greeting = getGreeting(t);
+  const roleKey = role === 'SYSADMIN' ? 'roles.SYSADMIN' : role === 'RESOLVER' ? 'roles.RESOLVER' : 'roles.CLIENT';
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
@@ -35,35 +37,35 @@ export default function DashboardPage() {
           {greeting}, {user?.first_name || user?.username}
         </h1>
         <p className="text-text-secondary mt-1">
-          {roleLabel} &middot; Here&apos;s your service desk overview
+          {t(`common:${roleKey}`)} &middot; {t('dashboard:overview_subtitle')}
         </p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Total Tickets"
+          label={t('dashboard:stats.total')}
           value={stats?.total ?? 0}
           color="teal"
           loading={statsLoading}
           delay={0}
         />
         <StatCard
-          label="Open"
+          label={t('dashboard:stats.open')}
           value={stats?.open ?? 0}
           color="blue"
           loading={statsLoading}
           delay={1}
         />
         <StatCard
-          label="In Progress"
+          label={t('dashboard:stats.in_progress')}
           value={stats?.in_progress ?? 0}
           color="purple"
           loading={statsLoading}
           delay={2}
         />
         <StatCard
-          label="Resolved"
+          label={t('dashboard:stats.resolved')}
           value={stats?.resolved ?? 0}
           color="green"
           loading={statsLoading}
@@ -74,12 +76,12 @@ export default function DashboardPage() {
       {/* Recent Tickets */}
       <div className="glass-card p-6 animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'both' }}>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-text-primary">Recent Tickets</h2>
+          <h2 className="text-lg font-semibold text-text-primary">{t('dashboard:recent_tickets')}</h2>
           <Link
             to="/tickets"
             className="text-sm text-teal-glow hover:text-teal-lighter transition-colors duration-[var(--transition-fast)]"
           >
-            View all &rarr;
+            {t('common:actions.view_all')} &rarr;
           </Link>
         </div>
 
@@ -103,7 +105,7 @@ export default function DashboardPage() {
                     {ticket.title}
                   </p>
                   <p className="text-xs text-text-muted mt-0.5">
-                    {ticket.source_area.name} &middot; {formatTimeAgo(ticket.created_at)}
+                    {ticket.source_area.name} &middot; {formatTimeAgo(ticket.created_at, t, i18n.language)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -115,7 +117,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-text-muted">No tickets found</p>
+            <p className="text-text-muted">{t('dashboard:no_tickets')}</p>
           </div>
         )}
       </div>
@@ -165,14 +167,14 @@ function StatCard({ label, value, color, loading, delay }: StatCardProps) {
 
 // ── Helpers ──
 
-function getGreeting(): string {
+function getGreeting(t: (key: string) => string): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return t('dashboard:greeting_morning');
+  if (hour < 18) return t('dashboard:greeting_afternoon');
+  return t('dashboard:greeting_evening');
 }
 
-function formatTimeAgo(dateStr: string): string {
+function formatTimeAgo(dateStr: string, t: (key: string, opts?: any) => string, lang: string): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -180,9 +182,9 @@ function formatTimeAgo(dateStr: string): string {
   const diffHrs = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHrs / 24);
 
-  if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHrs < 24) return `${diffHrs}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
+  if (diffMins < 1) return t('dashboard:time.just_now');
+  if (diffMins < 60) return t('dashboard:time.minutes_ago', { count: diffMins });
+  if (diffHrs < 24) return t('dashboard:time.hours_ago', { count: diffHrs });
+  if (diffDays < 7) return t('dashboard:time.days_ago', { count: diffDays });
+  return date.toLocaleDateString(lang.startsWith('es') ? 'es-ES' : 'en-US');
 }

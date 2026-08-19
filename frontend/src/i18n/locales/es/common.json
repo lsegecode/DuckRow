@@ -1,0 +1,41 @@
+{
+  "app_name": "DuckRow",
+  "tagline": "Mantén tus tareas en fila.",
+  "service_desk_title": "Mesa de Ayuda Agile Ducks",
+  "nav": {
+    "dashboard": "Panel Principal",
+    "tickets": "Tickets",
+    "new_ticket": "Nuevo Ticket"
+  },
+  "roles": {
+    "SYSADMIN": "Administrador del Sistema",
+    "SYSADMIN_SHORT": "Admin",
+    "RESOLVER": "Soporte / Resolutor",
+    "RESOLVER_SHORT": "Resolutor",
+    "CLIENT": "Cliente / Solicitante",
+    "CLIENT_SHORT": "Cliente"
+  },
+  "actions": {
+    "sign_out": "Cerrar Sesión",
+    "submit": "Enviar",
+    "submitting": "Enviando...",
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "cancel": "Cancelar",
+    "back": "Atrás",
+    "continue": "Continuar",
+    "delete": "Eliminar",
+    "deleting": "Eliminando...",
+    "modify_fields": "Modificar Campos",
+    "save_updates": "Guardar Cambios",
+    "clear_filters": "Limpiar todos los filtros",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "view_all": "Ver todos"
+  },
+  "language": {
+    "en": "English",
+    "es": "Español",
+    "switch_language": "Idioma"
+  }
+}

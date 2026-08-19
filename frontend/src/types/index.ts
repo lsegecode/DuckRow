@@ -39,13 +39,23 @@ export interface CurrentUser {
 
 // ── Ticket Types ──
 
+export type TicketType = 'BUG' | 'FEATURE';
 export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
 export type Urgency = 'LOW' | 'MEDIUM' | 'HIGH';
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
+export interface TicketAttachment {
+  id: string;
+  file_name: string;
+  file_size?: number | null;
+  url: string;
+  created_at: string;
+}
+
 export interface Ticket {
   id: string;
   title: string;
+  ticket_type: TicketType;
   description?: string;
   status: TicketStatus;
   urgency: Urgency;
@@ -53,6 +63,9 @@ export interface Ticket {
   source_area: Area;
   created_by: UserMinimal;
   assigned_to?: UserMinimal | null;
+  attachments?: TicketAttachment[];
+  assigned_at?: string | null;
+  resolved_at?: string | null;
   estimated_resolution_time?: string | null;
   resolution_documentation?: string | null;
   created_at: string;
@@ -61,13 +74,16 @@ export interface Ticket {
 
 export interface TicketCreatePayload {
   title: string;
+  ticket_type: TicketType;
   description: string;
   urgency: Urgency;
   source_area_id: string;
+  uploaded_images?: string[];
 }
 
 export interface TicketUpdatePayload {
   title?: string;
+  ticket_type?: TicketType;
   description?: string;
   status?: TicketStatus;
   urgency?: Urgency;

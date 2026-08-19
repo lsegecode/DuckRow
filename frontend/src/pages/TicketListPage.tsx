@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ticketsApi } from '../api/tickets';
 import { usersApi } from '../api/users';
-import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/StatusBadge';
 import UrgencyBadge from '../components/UrgencyBadge';
+import TicketTypeBadge from '../components/TicketTypeBadge';
+import { useAuth } from '../context/AuthContext';
 
 export default function TicketListPage() {
   const { role } = useAuth();
+  const { t, i18n } = useTranslation(['tickets', 'common']);
+  const [typeFilter, setTypeFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [urgencyFilter, setUrgencyFilter] = useState<string>('');
   const [areaFilter, setAreaFilter] = useState<string>('');
@@ -24,9 +28,10 @@ export default function TicketListPage() {
 
   // Fetch tickets based on filters
   const { data: ticketsData, isLoading, isError } = useQuery({
-    queryKey: ['tickets', { status: statusFilter, urgency: urgencyFilter, area: areaFilter, search, ordering, page }],
+    queryKey: ['tickets', { ticket_type: typeFilter, status: statusFilter, urgency: urgencyFilter, area: areaFilter, search, ordering, page }],
     queryFn: () =>
       ticketsApi.list({
+        ticket_type: typeFilter || undefined,
         status: statusFilter || undefined,
         urgency: urgencyFilter || undefined,
         source_area: areaFilter || undefined,
@@ -37,6 +42,7 @@ export default function TicketListPage() {
   });
 
   const handleResetFilters = () => {
+    setTypeFilter('');
     setStatusFilter('');
     setUrgencyFilter('');
     setAreaFilter('');
@@ -44,15 +50,16 @@ export default function TicketListPage() {
     setPage(1);
   };
 
-  const showCreateButton = role === 'CLIENT' || role === 'SYSADMIN';
+  const showCreateButton = true;
+  const dateLocale = i18n.language?.startsWith('es') ? 'es-ES' : 'en-US';
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-text-primary tracking-tight">Service Tickets</h1>
-          <p className="text-text-secondary mt-1">Manage and track service issues</p>
+          <h1 className="text-3xl font-bold text-text-primary tracking-tight">{t('tickets:list_title')}</h1>
+          <p className="text-text-secondary mt-1">{t('tickets:list_subtitle')}</p>
         </div>
         {showCreateButton && (
           <Link
@@ -63,16 +70,16 @@ export default function TicketListPage() {
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
-            Create Ticket
+            {t('tickets:create_ticket')}
           </Link>
         )}
       </div>
 
       {/* Filters Bar */}
       <div className="glass-card p-6 space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Search Input */}
-          <div className="relative">
+          <div className="relative lg:col-span-1 sm:col-span-2">
             <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-text-muted">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"></circle>
@@ -81,7 +88,7 @@ export default function TicketListPage() {
             </span>
             <input
               type="text"
-              placeholder="Search tickets..."
+              placeholder={t('tickets:search_placeholder')}
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -91,6 +98,20 @@ export default function TicketListPage() {
             />
           </div>
 
+          {/* Type Filter */}
+          <select
+            value={typeFilter}
+            onChange={(e) => {
+              setTypeFilter(e.target.value);
+              setPage(1);
+            }}
+            className="w-full px-3 py-2.5 bg-obsidian border border-border rounded-xl text-text-primary focus:border-teal focus:ring-1 focus:ring-teal/50 transition-all outline-none text-sm cursor-pointer"
+          >
+            <option value="">{t('tickets:filter_all_types')}</option>
+            <option value="BUG">🐞 {t('tickets:type.BUG')}</option>
+            <option value="FEATURE">✨ {t('tickets:type.FEATURE')}</option>
+          </select>
+
           {/* Status Filter */}
           <select
             value={statusFilter}
@@ -98,13 +119,13 @@ export default function TicketListPage() {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="w-full px-4 py-2.5 bg-obsidian border border-border rounded-xl text-text-primary focus:border-teal focus:ring-1 focus:ring-teal/50 transition-all outline-none text-sm cursor-pointer"
+            className="w-full px-3 py-2.5 bg-obsidian border border-border rounded-xl text-text-primary focus:border-teal focus:ring-1 focus:ring-teal/50 transition-all outline-none text-sm cursor-pointer"
           >
-            <option value="">All Statuses</option>
-            <option value="OPEN">Open</option>
-            <option value="IN_PROGRESS">In Progress</option>
-            <option value="RESOLVED">Resolved</option>
-            <option value="CLOSED">Closed</option>
+            <option value="">{t('tickets:filter_all_statuses')}</option>
+            <option value="OPEN">{t('tickets:status.OPEN')}</option>
+            <option value="IN_PROGRESS">{t('tickets:status.IN_PROGRESS')}</option>
+            <option value="RESOLVED">{t('tickets:status.RESOLVED')}</option>
+            <option value="CLOSED">{t('tickets:status.CLOSED')}</option>
           </select>
 
           {/* Urgency Filter */}
@@ -114,12 +135,12 @@ export default function TicketListPage() {
               setUrgencyFilter(e.target.value);
               setPage(1);
             }}
-            className="w-full px-4 py-2.5 bg-obsidian border border-border rounded-xl text-text-primary focus:border-teal focus:ring-1 focus:ring-teal/50 transition-all outline-none text-sm cursor-pointer"
+            className="w-full px-3 py-2.5 bg-obsidian border border-border rounded-xl text-text-primary focus:border-teal focus:ring-1 focus:ring-teal/50 transition-all outline-none text-sm cursor-pointer"
           >
-            <option value="">All Urgencies</option>
-            <option value="LOW">Low</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="HIGH">High</option>
+            <option value="">{t('tickets:filter_all_urgencies')}</option>
+            <option value="LOW">{t('tickets:urgency.LOW')}</option>
+            <option value="MEDIUM">{t('tickets:urgency.MEDIUM')}</option>
+            <option value="HIGH">{t('tickets:urgency.HIGH')}</option>
           </select>
 
           {/* Area Filter */}
@@ -129,9 +150,9 @@ export default function TicketListPage() {
               setAreaFilter(e.target.value);
               setPage(1);
             }}
-            className="w-full px-4 py-2.5 bg-obsidian border border-border rounded-xl text-text-primary focus:border-teal focus:ring-1 focus:ring-teal/50 transition-all outline-none text-sm cursor-pointer"
+            className="w-full px-3 py-2.5 bg-obsidian border border-border rounded-xl text-text-primary focus:border-teal focus:ring-1 focus:ring-teal/50 transition-all outline-none text-sm cursor-pointer"
           >
-            <option value="">All Areas</option>
+            <option value="">{t('tickets:filter_all_areas')}</option>
             {areas?.map((area) => (
               <option key={area.id} value={area.id}>
                 {area.name}
@@ -143,26 +164,26 @@ export default function TicketListPage() {
         {/* Ordering and Clear Filters */}
         <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-border/50">
           <div className="flex items-center gap-2 text-sm text-text-secondary">
-            <span>Sort by:</span>
+            <span>{t('tickets:sort_by')}:</span>
             <select
               value={ordering}
               onChange={(e) => setOrdering(e.target.value)}
               className="bg-transparent border-none text-teal-glow font-medium outline-none cursor-pointer focus:ring-0"
             >
-              <option value="-created_at">Newest First</option>
-              <option value="created_at">Oldest First</option>
-              <option value="urgency">Urgency (Low to High)</option>
-              <option value="-urgency">Urgency (High to Low)</option>
-              <option value="status">Status</option>
+              <option value="-created_at">{t('tickets:sort_newest')}</option>
+              <option value="created_at">{t('tickets:sort_oldest')}</option>
+              <option value="urgency">{t('tickets:sort_urgency_asc')}</option>
+              <option value="-urgency">{t('tickets:sort_urgency_desc')}</option>
+              <option value="status">{t('tickets:sort_status')}</option>
             </select>
           </div>
 
-          {(statusFilter || urgencyFilter || areaFilter || search) && (
+          {(typeFilter || statusFilter || urgencyFilter || areaFilter || search) && (
             <button
               onClick={handleResetFilters}
               className="text-sm text-urgency-high hover:underline transition-all"
             >
-              Clear all filters
+              {t('common:actions.clear_filters')}
             </button>
           )}
         </div>
@@ -178,18 +199,18 @@ export default function TicketListPage() {
           </div>
         ) : isError ? (
           <div className="p-12 text-center text-urgency-high">
-            <p className="font-semibold">Failed to load tickets.</p>
-            <p className="text-sm mt-1">Please try again later.</p>
+            <p className="font-semibold">{t('tickets:empty_state.title')}</p>
+            <p className="text-sm mt-1">{t('tickets:empty_state.subtitle')}</p>
           </div>
         ) : ticketsData?.results?.length ? (
           <div className="divide-y divide-border">
             {/* Table Header for larger screens */}
             <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-4 bg-obsidian-light text-xs font-semibold text-text-secondary uppercase tracking-wider">
-              <div className="col-span-5">Ticket Title</div>
-              <div className="col-span-2">Department</div>
-              <div className="col-span-2">Urgency</div>
-              {role !== 'CLIENT' && <div className="col-span-1">Assigned</div>}
-              <div className={role !== 'CLIENT' ? 'col-span-2' : 'col-span-3'}>Status</div>
+              <div className="col-span-5">{t('tickets:table.title')}</div>
+              <div className="col-span-2">{t('tickets:table.department')}</div>
+              <div className="col-span-2">{t('tickets:table.urgency')}</div>
+              {role !== 'CLIENT' && <div className="col-span-1">{t('tickets:table.assigned')}</div>}
+              <div className={role !== 'CLIENT' ? 'col-span-2' : 'col-span-3'}>{t('tickets:table.status')}</div>
             </div>
 
             {/* Ticket rows */}
@@ -200,21 +221,24 @@ export default function TicketListPage() {
                 className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 px-6 py-4 items-center hover:bg-surface-hover/50 transition-colors"
               >
                 <div className="col-span-1 md:col-span-5 min-w-0">
-                  <p className="text-sm font-medium text-text-primary truncate hover:text-teal-glow transition-colors">
-                    {ticket.title}
+                  <div className="flex items-center gap-2">
+                    <TicketTypeBadge type={ticket.ticket_type || 'BUG'} />
+                    <p className="text-sm font-medium text-text-primary truncate hover:text-teal-glow transition-colors">
+                      {ticket.title}
+                    </p>
+                  </div>
+                  <p className="text-xs text-text-muted mt-1 md:hidden">
+                    {ticket.source_area.name} &middot; {new Date(ticket.created_at).toLocaleDateString(dateLocale)}
                   </p>
-                  <p className="text-xs text-text-muted mt-0.5 md:hidden">
-                    {ticket.source_area.name} &middot; Created {new Date(ticket.created_at).toLocaleDateString()}
-                  </p>
-                  <p className="hidden md:block text-xs text-text-muted mt-0.5">
-                    Created by {ticket.created_by.first_name || ticket.created_by.username} &middot; {new Date(ticket.created_at).toLocaleDateString()}
+                  <p className="hidden md:block text-xs text-text-muted mt-1">
+                    {t('tickets:table.created_by')} {ticket.created_by.first_name || ticket.created_by.username} &middot; {new Date(ticket.created_at).toLocaleDateString(dateLocale)}
                   </p>
                 </div>
                 <div className="hidden md:block col-span-2 text-sm text-text-secondary">
                   {ticket.source_area.name}
                 </div>
                 <div className="col-span-2 flex items-center md:block">
-                  <span className="md:hidden text-xs text-text-secondary mr-2">Urgency:</span>
+                  <span className="md:hidden text-xs text-text-secondary mr-2">{t('tickets:table.urgency')}:</span>
                   <UrgencyBadge level={ticket.urgency} />
                   {role !== 'CLIENT' && ticket.internal_priority && (
                     <span className="ml-1.5">
@@ -226,12 +250,12 @@ export default function TicketListPage() {
                   <div className="col-span-1 text-sm text-text-secondary truncate">
                     {ticket.assigned_to
                       ? ticket.assigned_to.first_name || ticket.assigned_to.username
-                      : <span className="text-text-muted italic">Unassigned</span>
+                      : <span className="text-text-muted italic">{t('tickets:table.unassigned')}</span>
                     }
                   </div>
                 )}
                 <div className={`${role !== 'CLIENT' ? 'col-span-2' : 'col-span-3'} flex items-center md:block justify-between`}>
-                  <span className="md:hidden text-xs text-text-secondary">Status:</span>
+                  <span className="md:hidden text-xs text-text-secondary">{t('tickets:table.status')}:</span>
                   <StatusBadge status={ticket.status} />
                 </div>
               </Link>
@@ -245,8 +269,8 @@ export default function TicketListPage() {
                 <polyline points="14 2 14 8 20 8"></polyline>
               </svg>
             </div>
-            <h3 className="text-lg font-medium text-text-primary">No tickets found</h3>
-            <p className="text-text-secondary text-sm mt-1">Try adjusting your filters or search criteria.</p>
+            <h3 className="text-lg font-medium text-text-primary">{t('tickets:empty_state.title')}</h3>
+            <p className="text-text-secondary text-sm mt-1">{t('tickets:empty_state.subtitle')}</p>
           </div>
         )}
 
@@ -254,7 +278,11 @@ export default function TicketListPage() {
         {ticketsData && ticketsData.count > 20 && (
           <div className="px-6 py-4 bg-obsidian-light/50 border-t border-border flex items-center justify-between gap-4">
             <p className="text-xs text-text-secondary">
-              Showing {(page - 1) * 20 + 1} - {Math.min(page * 20, ticketsData.count)} of {ticketsData.count} tickets
+              {t('tickets:pagination.showing', {
+                start: (page - 1) * 20 + 1,
+                end: Math.min(page * 20, ticketsData.count),
+                total: ticketsData.count,
+              })}
             </p>
             <div className="flex gap-2">
               <button
@@ -262,14 +290,14 @@ export default function TicketListPage() {
                 disabled={page === 1}
                 className="px-3 py-1.5 bg-obsidian border border-border text-text-secondary hover:text-text-primary rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
-                Previous
+                {t('common:actions.previous')}
               </button>
               <button
                 onClick={() => setPage((p) => p + 1)}
                 disabled={!ticketsData.next}
                 className="px-3 py-1.5 bg-obsidian border border-border text-text-secondary hover:text-text-primary rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
-                Next
+                {t('common:actions.next')}
               </button>
             </div>
           </div>

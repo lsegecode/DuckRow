@@ -16,12 +16,16 @@ const client = axios.create({
   },
 });
 
-// ── Request interceptor: attach access token ──
+// ── Request interceptor: attach access token & accept language ──
 client.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    const currentLang = localStorage.getItem('i18nextLng') || 'en';
+    if (config.headers) {
+      config.headers['Accept-Language'] = currentLang.startsWith('es') ? 'es' : 'en';
     }
     return config;
   },

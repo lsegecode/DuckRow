@@ -1,5 +1,8 @@
 # 🚀 Running the DuckRow Project
 
+[![English](https://img.shields.io/badge/Language-English-blue.svg)](run_project.md)
+[![Español](https://img.shields.io/badge/Idioma-Español-green.svg)](es/run_project.md)
+
 This guide provides step-by-step instructions to configure, install, and run both the **Backend (Django REST Framework)** and the **Frontend (React + Vite + TypeScript)** applications.
 
 ---

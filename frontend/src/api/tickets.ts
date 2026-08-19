@@ -12,6 +12,7 @@ import type {
 } from '../types';
 
 export interface TicketFilters {
+  ticket_type?: string;
   status?: string;
   urgency?: string;
   internal_priority?: string;
@@ -47,6 +48,11 @@ export const ticketsApi = {
 
   delete: async (id: string): Promise<void> => {
     await client.delete(`/tickets/tickets/${id}/`);
+  },
+
+  claim: async (id: string): Promise<Ticket> => {
+    const { data } = await client.post<Ticket>(`/tickets/tickets/${id}/claim/`);
+    return data;
   },
 
   stats: async (): Promise<TicketStats> => {

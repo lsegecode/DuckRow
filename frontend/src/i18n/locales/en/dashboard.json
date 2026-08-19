@@ -1,0 +1,20 @@
+{
+  "greeting_morning": "Good morning",
+  "greeting_afternoon": "Good afternoon",
+  "greeting_evening": "Good evening",
+  "overview_subtitle": "Here's your service desk overview",
+  "stats": {
+    "total": "Total Tickets",
+    "open": "Open",
+    "in_progress": "In Progress",
+    "resolved": "Resolved"
+  },
+  "recent_tickets": "Recent Tickets",
+  "no_tickets": "No tickets found",
+  "time": {
+    "just_now": "just now",
+    "minutes_ago": "{{count}}m ago",
+    "hours_ago": "{{count}}h ago",
+    "days_ago": "{{count}}d ago"
+  }
+}
