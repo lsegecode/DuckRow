@@ -222,8 +222,8 @@ class TicketUpdateSerializer(serializers.ModelSerializer):
         role = request.user.profile.role
 
         if role == 'RESOLVER':
-            # Resolvers can update status, resolution_documentation, and estimated_resolution_time
-            allowed_fields = {'status', 'resolution_documentation', 'estimated_resolution_time'}
+            # Resolvers can update status, internal_priority, resolution_documentation, and estimated_resolution_time
+            allowed_fields = {'status', 'internal_priority', 'resolution_documentation', 'estimated_resolution_time'}
             incoming_fields = set(attrs.keys())
             forbidden = incoming_fields - allowed_fields
             if forbidden:

@@ -66,14 +66,32 @@ class TicketPermissionAndScopeTests(APITestCase):
         self.assertNotIn('assigned_to', ticket_data)
 
     def test_resolver_scope_isolation(self):
-        """Test that a RESOLVER can only see tickets assigned to them."""
+        """Test that a RESOLVER sees tickets assigned to them and unassigned tickets, but not tickets assigned to another staff member."""
+        # Create a ticket assigned to another user
+        other_resolver = User.objects.create_user(username='resolver2', password='resolver2password')
+        other_resolver.profile.role = 'RESOLVER'
+        other_resolver.profile.save()
+
+        Ticket.objects.create(
+            title='Secret Finance Issue',
+            description='Private ticket.',
+            created_by=self.admin,
+            source_area=self.area_it,
+            assigned_to=other_resolver,
+            urgency='HIGH',
+            internal_priority='HIGH'
+        )
+
         self.login_jwt(self.resolver)
         response = self.client.get('/api/v1/tickets/tickets/')
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # Should only see IT ticket (which is assigned to them), not the unassigned HR ticket
-        self.assertEqual(response.data['count'], 1)
-        self.assertEqual(response.data['results'][0]['title'], 'IT Network Issue')
+        # Should see IT ticket (assigned to self) and unassigned HR ticket (pool), but NOT the ticket assigned to resolver2
+        self.assertEqual(response.data['count'], 2)
+        titles = [t['title'] for t in response.data['results']]
+        self.assertIn('IT Network Issue', titles)
+        self.assertIn('HR Payroll Question', titles)
+        self.assertNotIn('Secret Finance Issue', titles)
 
     def test_sysadmin_scope(self):
         """Test that a SYSADMIN has global visibility over all tickets."""
@@ -85,7 +103,7 @@ class TicketPermissionAndScopeTests(APITestCase):
         self.assertEqual(response.data['count'], 2)
 
     def test_resolver_limited_update_permissions(self):
-        """Test that a RESOLVER can only update status and resolution_documentation."""
+        """Test that a RESOLVER can update status, internal_priority, and resolution_documentation, but not general description."""
         self.login_jwt(self.resolver)
         
         # Try updating status and description (description is forbidden)
@@ -96,9 +114,10 @@ class TicketPermissionAndScopeTests(APITestCase):
         response = self.client.patch(f'/api/v1/tickets/tickets/{self.ticket_it.id}/', payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         
-        # Try updating only status and resolution_documentation (valid)
+        # Try updating status, internal_priority, and resolution_documentation (valid)
         valid_payload = {
             'status': 'RESOLVED',
+            'internal_priority': 'CRITICAL',
             'resolution_documentation': 'Reset router and it started working again.'
         }
         response = self.client.patch(f'/api/v1/tickets/tickets/{self.ticket_it.id}/', valid_payload)
@@ -106,6 +125,7 @@ class TicketPermissionAndScopeTests(APITestCase):
         
         self.ticket_it.refresh_from_db()
         self.assertEqual(self.ticket_it.status, 'RESOLVED')
+        self.assertEqual(self.ticket_it.internal_priority, 'CRITICAL')
         self.assertEqual(self.ticket_it.resolution_documentation, 'Reset router and it started working again.')
 
     def test_client_cannot_update_tickets(self):

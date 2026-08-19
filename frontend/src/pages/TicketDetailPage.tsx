@@ -121,6 +121,7 @@ export default function TicketDetailPage() {
       payload.resolution_documentation = resDocs || null;
     } else if (role === 'RESOLVER') {
       payload.status = statusVal;
+      payload.internal_priority = priorityVal || undefined;
       payload.estimated_resolution_time = estimatedResolutionVal ? new Date(estimatedResolutionVal).toISOString() : null;
       payload.resolution_documentation = resDocs || null;
     }
@@ -269,30 +270,95 @@ export default function TicketDetailPage() {
               </div>
 
               {isEditing ? (
-                <form onSubmit={handleUpdate} className="space-y-4">
+                <form onSubmit={handleUpdate} className="space-y-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Status Dropdown */}
-                    <div>
-                      <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                        {t('tickets:table.status')}
+                    {/* Priority Selector for SYSADMIN & RESOLVER */}
+                    {(role === 'SYSADMIN' || role === 'RESOLVER') && (
+                      <div>
+                        <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                          {t('tickets:table.priority')}
+                        </label>
+                        <select
+                          value={priorityVal}
+                          onChange={(e) => setPriorityVal(e.target.value as Priority)}
+                          className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none cursor-pointer"
+                        >
+                          <option value="LOW">{t('tickets:priority.LOW')}</option>
+                          <option value="MEDIUM">{t('tickets:priority.MEDIUM')}</option>
+                          <option value="HIGH">{t('tickets:priority.HIGH')}</option>
+                          <option value="CRITICAL">{t('tickets:priority.CRITICAL')}</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Sysadmin Field (Assign) */}
+                    {role === 'SYSADMIN' && (
+                      <div>
+                        <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                          {t('tickets:table.assigned')}
+                        </label>
+                        <select
+                          value={assignedToVal}
+                          onChange={(e) => setAssignedToVal(e.target.value ? Number(e.target.value) : '')}
+                          className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none cursor-pointer"
+                        >
+                          <option value="">{t('tickets:table.unassigned')}</option>
+                          {resolversList.map((r) => (
+                            <option key={r.user.id} value={r.user.id}>
+                              {r.user.first_name || r.user.username}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Estimated Resolution Time (Datetime or Hours presets) */}
+                  <div className="p-4 rounded-xl bg-obsidian/70 border border-border/80 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                        ⏱️ {t('tickets:detail.estimated_resolution')}
                       </label>
-                      <select
-                        value={statusVal}
-                        onChange={(e) => setStatusVal(e.target.value as TicketStatus)}
-                        className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none"
-                      >
-                        <option value="OPEN">{t('tickets:status.OPEN')}</option>
-                        <option value="IN_PROGRESS">{t('tickets:status.IN_PROGRESS')}</option>
-                        <option value="RESOLVED">{t('tickets:status.RESOLVED')}</option>
-                        <option value="CLOSED">{t('tickets:status.CLOSED')}</option>
-                      </select>
+                      {estimatedResolutionVal && (
+                        <button
+                          type="button"
+                          onClick={() => setEstimatedResolutionVal('')}
+                          className="text-[11px] text-urgency-high hover:underline"
+                        >
+                          {t('common:actions.clear')}
+                        </button>
+                      )}
                     </div>
 
-                    {/* Estimated Resolution Time (For Resolvers and Sysadmins) */}
+                    {/* Quick Hours Presets */}
                     <div>
-                      <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                        {t('tickets:detail.estimated_resolution')}
-                      </label>
+                      <span className="text-[11px] text-text-muted block mb-1.5">
+                        {i18n.language?.startsWith('es') ? 'Calcular a partir de ahora:' : 'Add hours from now:'}
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[1, 2, 4, 8, 24, 48].map((hrs) => (
+                          <button
+                            key={hrs}
+                            type="button"
+                            onClick={() => {
+                              const target = new Date(Date.now() + hrs * 3600 * 1000);
+                              // Format as YYYY-MM-DDTHH:mm in local time
+                              const localIso = new Date(target.getTime() - target.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                              setEstimatedResolutionVal(localIso);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-surface hover:bg-teal/20 hover:text-teal-glow text-text-secondary border border-border text-xs font-semibold transition-all cursor-pointer active:scale-95"
+                          >
+                            +{hrs >= 24 ? `${hrs / 24}d` : `${hrs}h`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Datetime picker */}
+                    <div>
+                      <span className="text-[11px] text-text-muted block mb-1.5">
+                        {i18n.language?.startsWith('es') ? 'O selecciona fecha y hora exacta:' : 'Or choose specific date & time:'}
+                      </span>
                       <input
                         type="datetime-local"
                         value={estimatedResolutionVal}
@@ -300,45 +366,6 @@ export default function TicketDetailPage() {
                         className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none"
                       />
                     </div>
-
-                    {/* Sysadmin Fields (Priority & Assign) */}
-                    {role === 'SYSADMIN' && (
-                      <>
-                        <div>
-                          <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                            {t('tickets:table.priority')}
-                          </label>
-                          <select
-                            value={priorityVal}
-                            onChange={(e) => setPriorityVal(e.target.value as Priority)}
-                            className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none"
-                          >
-                            <option value="LOW">{t('tickets:priority.LOW')}</option>
-                            <option value="MEDIUM">{t('tickets:priority.MEDIUM')}</option>
-                            <option value="HIGH">{t('tickets:priority.HIGH')}</option>
-                            <option value="CRITICAL">{t('tickets:priority.CRITICAL')}</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                            {t('tickets:table.assigned')}
-                          </label>
-                          <select
-                            value={assignedToVal}
-                            onChange={(e) => setAssignedToVal(e.target.value ? Number(e.target.value) : '')}
-                            className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none"
-                          >
-                            <option value="">{t('tickets:table.unassigned')}</option>
-                            {resolversList.map((r) => (
-                              <option key={r.user.id} value={r.user.id}>
-                                {r.user.first_name || r.user.username}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </>
-                    )}
                   </div>
 
                   {/* Resolution Docs Field */}

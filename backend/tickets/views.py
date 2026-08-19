@@ -133,8 +133,6 @@ class TicketViewSet(viewsets.ModelViewSet):
         ticket.assigned_to = request.user
         if not ticket.assigned_at:
             ticket.assigned_at = timezone.now()
-        if ticket.status == 'OPEN':
-            ticket.status = 'IN_PROGRESS'
         ticket.save()
 
         return Response(TicketDetailSerializer(ticket, context={'request': request}).data)

@@ -1,8 +1,9 @@
 /**
  * DashboardPage — summary stats and recent tickets.
- * Role-aware: shows scoped data based on user role with full i18n.
+ * Role-aware: shows scoped data based on user role with interactive status filter on StatCards.
  */
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +16,7 @@ import type { Ticket } from '../types';
 export default function DashboardPage() {
   const { user, role } = useAuth();
   const { t, i18n } = useTranslation(['dashboard', 'common', 'tickets']);
+  const [activeStatusFilter, setActiveStatusFilter] = useState<string>('');
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['ticket-stats'],
@@ -22,17 +24,25 @@ export default function DashboardPage() {
   });
 
   const { data: ticketsData, isLoading: ticketsLoading } = useQuery({
-    queryKey: ['tickets', { page: 1 }],
-    queryFn: () => ticketsApi.list({ page: 1 }),
+    queryKey: ['tickets', { page: 1, status: activeStatusFilter }],
+    queryFn: () => ticketsApi.list({ page: 1, status: activeStatusFilter || undefined }),
   });
 
   const greeting = getGreeting(t);
   const roleKey = role === 'SYSADMIN' ? 'roles.SYSADMIN' : role === 'RESOLVER' ? 'roles.RESOLVER' : 'roles.CLIENT';
 
+  const getSectionTitle = () => {
+    if (!activeStatusFilter) return t('dashboard:recent_tickets');
+    if (activeStatusFilter === 'OPEN') return `${t('tickets:status.OPEN')} (${stats?.open ?? 0})`;
+    if (activeStatusFilter === 'IN_PROGRESS') return `${t('tickets:status.IN_PROGRESS')} (${stats?.in_progress ?? 0})`;
+    if (activeStatusFilter === 'RESOLVED') return `${t('tickets:status.RESOLVED')} (${stats?.resolved ?? 0})`;
+    return t('dashboard:recent_tickets');
+  };
+
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="animate-fade-in">
+      <div>
         <h1 className="text-3xl font-bold text-text-primary">
           {greeting}, {user?.first_name || user?.username}
         </h1>
@@ -41,44 +51,71 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label={t('dashboard:stats.total')}
-          value={stats?.total ?? 0}
-          color="teal"
-          loading={statsLoading}
-          delay={0}
-        />
-        <StatCard
-          label={t('dashboard:stats.open')}
-          value={stats?.open ?? 0}
-          color="blue"
-          loading={statsLoading}
-          delay={1}
-        />
-        <StatCard
-          label={t('dashboard:stats.in_progress')}
-          value={stats?.in_progress ?? 0}
-          color="purple"
-          loading={statsLoading}
-          delay={2}
-        />
-        <StatCard
-          label={t('dashboard:stats.resolved')}
-          value={stats?.resolved ?? 0}
-          color="green"
-          loading={statsLoading}
-          delay={3}
-        />
+      {/* Interactive Stats Grid (Clicking acts as filter) */}
+      <div>
+        <p className="text-xs text-text-muted mb-2 font-medium">
+          {i18n.language?.startsWith('es')
+            ? '💡 Haz clic en una tarjeta para filtrar los tickets:'
+            : '💡 Click a stat card to filter tickets:'}
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            label={t('dashboard:stats.total')}
+            value={stats?.total ?? 0}
+            color="teal"
+            loading={statsLoading}
+            delay={0}
+            isActive={activeStatusFilter === ''}
+            onClick={() => setActiveStatusFilter('')}
+          />
+          <StatCard
+            label={t('dashboard:stats.open')}
+            value={stats?.open ?? 0}
+            color="blue"
+            loading={statsLoading}
+            delay={1}
+            isActive={activeStatusFilter === 'OPEN'}
+            onClick={() => setActiveStatusFilter(activeStatusFilter === 'OPEN' ? '' : 'OPEN')}
+          />
+          <StatCard
+            label={t('dashboard:stats.in_progress')}
+            value={stats?.in_progress ?? 0}
+            color="purple"
+            loading={statsLoading}
+            delay={2}
+            isActive={activeStatusFilter === 'IN_PROGRESS'}
+            onClick={() => setActiveStatusFilter(activeStatusFilter === 'IN_PROGRESS' ? '' : 'IN_PROGRESS')}
+          />
+          <StatCard
+            label={t('dashboard:stats.resolved')}
+            value={stats?.resolved ?? 0}
+            color="green"
+            loading={statsLoading}
+            delay={3}
+            isActive={activeStatusFilter === 'RESOLVED'}
+            onClick={() => setActiveStatusFilter(activeStatusFilter === 'RESOLVED' ? '' : 'RESOLVED')}
+          />
+        </div>
       </div>
 
-      {/* Recent Tickets */}
+      {/* Filtered Tickets List */}
       <div className="glass-card p-6 animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'both' }}>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-text-primary">{t('dashboard:recent_tickets')}</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-text-primary">{getSectionTitle()}</h2>
+            {activeStatusFilter && (
+              <button
+                onClick={() => setActiveStatusFilter('')}
+                className="px-2 py-0.5 rounded-full bg-surface text-text-muted hover:text-text-primary border border-border text-xs transition-colors cursor-pointer"
+              >
+                ✕ {i18n.language?.startsWith('es') ? 'Quitar filtro' : 'Clear filter'}
+              </button>
+            )}
+          </div>
+
           <Link
-            to="/tickets"
+            to={activeStatusFilter ? `/tickets?status=${activeStatusFilter}` : '/tickets'}
             className="text-sm text-teal-glow hover:text-teal-lighter transition-colors duration-[var(--transition-fast)]"
           >
             {t('common:actions.view_all')} &rarr;
@@ -93,12 +130,12 @@ export default function DashboardPage() {
           </div>
         ) : ticketsData?.results?.length ? (
           <div className="space-y-2">
-            {ticketsData.results.slice(0, 6).map((ticket: Ticket, index: number) => (
+            {ticketsData.results.slice(0, 8).map((ticket: Ticket, index: number) => (
               <Link
                 key={ticket.id}
                 to={`/tickets/${ticket.id}`}
                 className="flex items-center gap-4 p-4 rounded-xl bg-surface/30 hover:bg-surface-hover border border-transparent hover:border-border transition-all duration-[var(--transition-fast)] group"
-                style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'both' }}
+                style={{ animationDelay: `${index * 40}ms`, animationFillMode: 'both' }}
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-text-primary group-hover:text-teal-glow transition-colors truncate">
@@ -110,6 +147,9 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <UrgencyBadge level={ticket.urgency} />
+                  {role !== 'CLIENT' && ticket.internal_priority && (
+                    <UrgencyBadge level={ticket.internal_priority} type="priority" />
+                  )}
                   <StatusBadge status={ticket.status} />
                 </div>
               </Link>
@@ -133,14 +173,16 @@ interface StatCardProps {
   color: 'teal' | 'blue' | 'purple' | 'green';
   loading: boolean;
   delay: number;
+  isActive: boolean;
+  onClick: () => void;
 }
 
-function StatCard({ label, value, color, loading, delay }: StatCardProps) {
+function StatCard({ label, value, color, loading, delay, isActive, onClick }: StatCardProps) {
   const colorMap = {
-    teal: 'from-teal/20 to-teal/5 border-teal/20',
-    blue: 'from-status-open/20 to-status-open/5 border-status-open/20',
-    purple: 'from-status-in-progress/20 to-status-in-progress/5 border-status-in-progress/20',
-    green: 'from-status-resolved/20 to-status-resolved/5 border-status-resolved/20',
+    teal: 'from-teal/20 to-teal/5 border-teal/30 hover:border-teal/60',
+    blue: 'from-status-open/20 to-status-open/5 border-status-open/30 hover:border-status-open/60',
+    purple: 'from-status-in-progress/20 to-status-in-progress/5 border-status-in-progress/30 hover:border-status-in-progress/60',
+    green: 'from-status-resolved/20 to-status-resolved/5 border-status-resolved/30 hover:border-status-resolved/60',
   };
 
   const textColor = {
@@ -150,18 +192,34 @@ function StatCard({ label, value, color, loading, delay }: StatCardProps) {
     green: 'text-status-resolved',
   };
 
+  const activeRing = {
+    teal: 'ring-2 ring-teal-glow shadow-[0_0_15px_rgba(13,92,77,0.4)] scale-[1.02]',
+    blue: 'ring-2 ring-status-open shadow-[0_0_15px_rgba(59,130,246,0.3)] scale-[1.02]',
+    purple: 'ring-2 ring-status-in-progress shadow-[0_0_15px_rgba(168,85,247,0.3)] scale-[1.02]',
+    green: 'ring-2 ring-status-resolved shadow-[0_0_15px_rgba(34,197,94,0.3)] scale-[1.02]',
+  };
+
   return (
-    <div
-      className={`glass-card p-6 bg-gradient-to-br ${colorMap[color]} animate-fade-in`}
+    <button
+      type="button"
+      onClick={onClick}
+      className={`glass-card p-6 bg-gradient-to-br text-left transition-all duration-[var(--transition-fast)] cursor-pointer ${colorMap[color]} ${
+        isActive ? activeRing[color] : 'opacity-80 hover:opacity-100'
+      }`}
       style={{ animationDelay: `${delay * 80}ms`, animationFillMode: 'both' }}
     >
-      <p className="text-sm text-text-secondary font-medium">{label}</p>
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-text-secondary font-medium">{label}</p>
+        {isActive && (
+          <span className="w-2 h-2 rounded-full bg-teal-glow animate-pulse" />
+        )}
+      </div>
       {loading ? (
         <div className="h-9 w-16 bg-surface/50 rounded-lg animate-pulse mt-2" />
       ) : (
         <p className={`text-4xl font-bold mt-2 ${textColor[color]}`}>{value}</p>
       )}
-    </div>
+    </button>
   );
 }
 

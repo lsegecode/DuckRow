@@ -152,5 +152,31 @@
     "use_case_md_header": "### 🎯 Business Need / Use Case",
     "feature_details_md_header": "### 🛠️ Additional Details & Suggestions",
     "create_error": "Failed to create ticket. Please check all fields and try again."
+  },
+  "view_list": "List View",
+  "view_board": "Board View",
+  "board": {
+    "col_queue": "Queue / To Do",
+    "col_queue_desc": "Created and assigned tickets",
+    "col_in_progress": "In Progress",
+    "col_in_progress_desc": "Active work in progress",
+    "col_done": "Resolved / Closed",
+    "col_done_desc": "Testing and completed tickets",
+    "substatus_created": "Created",
+    "substatus_assigned": "Assigned",
+    "substatus_in_progress": "In Progress",
+    "substatus_resolved": "Testing",
+    "substatus_closed": "Closed",
+    "action_claim": "Assign to Me",
+    "action_start": "Start Progress",
+    "action_resolve": "Move to Testing",
+    "action_close": "Close Ticket",
+    "action_priority": "Priority",
+    "empty_column": "No tickets in this stage",
+    "assigned_to": "Assigned to {{name}}",
+    "testing_by": "Testing by {{name}}",
+    "unassigned": "Unassigned",
+    "oldest_badge": "Oldest",
+    "count_breakdown": "{{count}} tickets"
   }
 }

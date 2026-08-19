@@ -158,6 +158,10 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (step < 4) {
+      handleNextStep();
+      return;
+    }
     if (createTicketMutation.isPending) return;
 
     createTicketMutation.mutate({
@@ -305,6 +309,14 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
                     }
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (isStep1Valid) {
+                          handleNextStep();
+                        }
+                      }
+                    }}
                     className="w-full px-4 py-3 bg-obsidian border border-border rounded-xl text-text-primary placeholder-text-muted focus:border-teal focus:ring-1 focus:ring-teal/50 transition-all outline-none text-sm"
                   />
                   <p className="text-xs text-text-muted mt-1">{t('tickets:wizard.title_hint')}</p>

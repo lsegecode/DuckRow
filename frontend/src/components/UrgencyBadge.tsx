@@ -1,5 +1,14 @@
 /**
- * UrgencyBadge — color-coded pill for urgency/priority levels.
+ * UrgencyBadge — color-coded visual indicator for external urgency and internal priority.
+ *
+ * Requirements:
+ * - 'E' for External Urgency (Client-facing)
+ * - 'I' for Internal Priority (Staff-facing)
+ * - Low = Grey
+ * - Medium = Green
+ * - High = Yellow
+ * - Critical = Red
+ * - Minimal design without text to declutter cards.
  */
 
 import { useTranslation } from 'react-i18next';
@@ -8,29 +17,54 @@ import type { Urgency, Priority } from '../types';
 interface UrgencyBadgeProps {
   level: Urgency | Priority;
   type?: 'urgency' | 'priority';
+  size?: 'sm' | 'md';
 }
 
-const LEVEL_CLASSES: Record<string, string> = {
-  LOW: 'bg-urgency-low/20 text-urgency-low border-urgency-low/30',
-  MEDIUM: 'bg-urgency-medium/20 text-urgency-medium border-urgency-medium/30',
-  HIGH: 'bg-urgency-high/20 text-urgency-high border-urgency-high/30',
-  CRITICAL: 'bg-priority-critical/20 text-priority-critical border-priority-critical/30 animate-pulse-glow',
+const COLOR_MAP: Record<string, { bg: string; text: string; border: string; glow: string }> = {
+  LOW: {
+    bg: 'bg-slate-800/80',
+    text: 'text-slate-300',
+    border: 'border-slate-600/60',
+    glow: 'shadow-none',
+  },
+  MEDIUM: {
+    bg: 'bg-emerald-950/80',
+    text: 'text-emerald-400',
+    border: 'border-emerald-500/50',
+    glow: 'shadow-[0_0_8px_rgba(16,185,129,0.2)]',
+  },
+  HIGH: {
+    bg: 'bg-amber-950/80',
+    text: 'text-amber-300',
+    border: 'border-amber-500/50',
+    glow: 'shadow-[0_0_8px_rgba(245,158,11,0.2)]',
+  },
+  CRITICAL: {
+    bg: 'bg-rose-950/80',
+    text: 'text-rose-300',
+    border: 'border-rose-500/60',
+    glow: 'shadow-[0_0_10px_rgba(244,63,94,0.3)] animate-pulse',
+  },
 };
 
-export default function UrgencyBadge({ level, type = 'urgency' }: UrgencyBadgeProps) {
+export default function UrgencyBadge({ level, type = 'urgency', size = 'sm' }: UrgencyBadgeProps) {
   const { t } = useTranslation('tickets');
-  const classes = LEVEL_CLASSES[level] || LEVEL_CLASSES.LOW;
-  const prefix = type === 'priority' ? 'P' : 'U';
+  const style = COLOR_MAP[level] || COLOR_MAP.LOW;
+  const prefix = type === 'priority' ? 'I' : 'E';
   const label = t(`${type}.${level}`);
   const titleType = type === 'priority' ? t('table.priority') : t('table.urgency');
 
+  const sizeClass =
+    size === 'md'
+      ? 'w-6 h-6 text-xs'
+      : 'w-5 h-5 text-[11px]';
+
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-full border ${classes}`}
-      title={`${titleType}: ${label}`}
+      className={`inline-flex items-center justify-center ${sizeClass} font-bold rounded-md border ${style.bg} ${style.text} ${style.border} ${style.glow} select-none cursor-default transition-all`}
+      title={`${titleType} (${prefix}): ${label}`}
     >
-      <span className="mr-1 opacity-60">{prefix}:</span>
-      {label}
+      {prefix}
     </span>
   );
 }
