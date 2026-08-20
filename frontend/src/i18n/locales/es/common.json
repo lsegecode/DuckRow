@@ -5,6 +5,7 @@
   "nav": {
     "dashboard": "Panel Principal",
     "tickets": "Tickets",
+    "backlog": "Historial",
     "new_ticket": "Nuevo Ticket"
   },
   "roles": {

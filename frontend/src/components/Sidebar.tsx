@@ -31,6 +31,12 @@ export default function Sidebar() {
       roles: ['CLIENT', 'RESOLVER', 'SYSADMIN'] as const,
     },
     {
+      to: '/backlog',
+      icon: BacklogIcon,
+      labelKey: 'nav.backlog',
+      roles: ['CLIENT', 'RESOLVER', 'SYSADMIN'] as const,
+    },
+    {
       to: '/tickets/new',
       icon: PlusIcon,
       labelKey: 'nav.new_ticket',
@@ -137,6 +143,16 @@ function PlusIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
       <path d="M9 3.75v10.5M3.75 9h10.5" />
+    </svg>
+  );
+}
+
+function BacklogIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 8v13H3V8" />
+      <path d="M1 3h22v5H1z" />
+      <path d="M10 12h4" />
     </svg>
   );
 }

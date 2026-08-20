@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage';
 import TicketListPage from './pages/TicketListPage';
 import TicketDetailPage from './pages/TicketDetailPage';
 import CreateTicketPage from './pages/CreateTicketPage';
+import BacklogPage from './pages/BacklogPage';
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/tickets" element={<TicketListPage />} />
           <Route path="/tickets/new" element={<CreateTicketPage />} />
           <Route path="/tickets/:id" element={<TicketDetailPage />} />
+          <Route path="/backlog" element={<BacklogPage />} />
         </Route>
 
         {/* Default redirects */}

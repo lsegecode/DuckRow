@@ -21,6 +21,9 @@ export interface TicketFilters {
   search?: string;
   ordering?: string;
   page?: number;
+  page_size?: number;
+  date_from?: string;
+  date_to?: string;
 }
 
 export const ticketsApi = {

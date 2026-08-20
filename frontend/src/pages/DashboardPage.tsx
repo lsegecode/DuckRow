@@ -52,13 +52,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Interactive Stats Grid (Clicking acts as filter) */}
-      <div>
-        <p className="text-xs text-text-muted mb-2 font-medium">
-          {i18n.language?.startsWith('es')
-            ? '💡 Haz clic en una tarjeta para filtrar los tickets:'
-            : '💡 Click a stat card to filter tickets:'}
-        </p>
-
+      <div className="py-1">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label={t('dashboard:stats.total')}
@@ -114,12 +108,20 @@ export default function DashboardPage() {
             )}
           </div>
 
-          <Link
-            to={activeStatusFilter ? `/tickets?status=${activeStatusFilter}` : '/tickets'}
-            className="text-sm text-teal-glow hover:text-teal-lighter transition-colors duration-[var(--transition-fast)]"
-          >
-            {t('common:actions.view_all')} &rarr;
-          </Link>
+          <div className="flex items-center gap-4 shrink-0">
+            <Link
+              to="/backlog"
+              className="text-sm text-text-muted hover:text-teal-glow transition-colors duration-[var(--transition-fast)]"
+            >
+              {i18n.language?.startsWith('es') ? 'Ver historial' : 'View backlog'} →
+            </Link>
+            <Link
+              to={activeStatusFilter ? `/tickets?status=${activeStatusFilter}` : '/tickets'}
+              className="text-sm text-teal-glow hover:text-teal-lighter transition-colors duration-[var(--transition-fast)]"
+            >
+              {t('common:actions.view_all')} &rarr;
+            </Link>
+          </div>
         </div>
 
         {ticketsLoading ? (
@@ -130,7 +132,7 @@ export default function DashboardPage() {
           </div>
         ) : ticketsData?.results?.length ? (
           <div className="space-y-2">
-            {ticketsData.results.slice(0, 8).map((ticket: Ticket, index: number) => (
+            {ticketsData.results.slice(0, 10).map((ticket: Ticket, index: number) => (
               <Link
                 key={ticket.id}
                 to={`/tickets/${ticket.id}`}
@@ -178,46 +180,83 @@ interface StatCardProps {
 }
 
 function StatCard({ label, value, color, loading, delay, isActive, onClick }: StatCardProps) {
-  const colorMap = {
-    teal: 'from-teal/20 to-teal/5 border-teal/30 hover:border-teal/60',
-    blue: 'from-status-open/20 to-status-open/5 border-status-open/30 hover:border-status-open/60',
-    purple: 'from-status-in-progress/20 to-status-in-progress/5 border-status-in-progress/30 hover:border-status-in-progress/60',
-    green: 'from-status-resolved/20 to-status-resolved/5 border-status-resolved/30 hover:border-status-resolved/60',
+  const activeStyles = {
+    teal: {
+      card: 'bg-gradient-to-br from-teal/40 via-teal-dim/30 to-surface border-2 border-teal-glow shadow-[0_0_25px_rgba(20,184,154,0.4)] scale-105 z-10 opacity-100',
+      label: 'text-teal-glow font-bold',
+      value: 'text-teal-glow drop-shadow-[0_0_10px_rgba(20,184,154,0.6)]',
+      badge: 'bg-teal-glow/20 border-teal-glow/50 text-teal-glow',
+      dot: 'bg-teal-glow shadow-[0_0_8px_#14B89A]',
+    },
+    blue: {
+      card: 'bg-gradient-to-br from-status-open/40 via-blue-950/40 to-surface border-2 border-status-open shadow-[0_0_25px_rgba(59,130,246,0.4)] scale-105 z-10 opacity-100',
+      label: 'text-blue-400 font-bold',
+      value: 'text-status-open drop-shadow-[0_0_10px_rgba(59,130,246,0.6)]',
+      badge: 'bg-status-open/20 border-status-open/50 text-blue-400',
+      dot: 'bg-status-open shadow-[0_0_8px_#3B82F6]',
+    },
+    purple: {
+      card: 'bg-gradient-to-br from-status-in-progress/40 via-purple-950/40 to-surface border-2 border-status-in-progress shadow-[0_0_25px_rgba(139,92,246,0.4)] scale-105 z-10 opacity-100',
+      label: 'text-purple-300 font-bold',
+      value: 'text-status-in-progress drop-shadow-[0_0_10px_rgba(139,92,246,0.6)]',
+      badge: 'bg-status-in-progress/20 border-status-in-progress/50 text-purple-300',
+      dot: 'bg-status-in-progress shadow-[0_0_8px_#8B5CF6]',
+    },
+    green: {
+      card: 'bg-gradient-to-br from-status-resolved/40 via-emerald-950/40 to-surface border-2 border-status-resolved shadow-[0_0_25px_rgba(16,185,129,0.4)] scale-105 z-10 opacity-100',
+      label: 'text-emerald-400 font-bold',
+      value: 'text-status-resolved drop-shadow-[0_0_10px_rgba(16,185,129,0.6)]',
+      badge: 'bg-status-resolved/20 border-status-resolved/50 text-emerald-400',
+      dot: 'bg-status-resolved shadow-[0_0_8px_#10B981]',
+    },
   };
 
-  const textColor = {
-    teal: 'text-teal-glow',
-    blue: 'text-status-open',
-    purple: 'text-status-in-progress',
-    green: 'text-status-resolved',
-  };
+  const offCardStyle =
+    'bg-surface/30 border border-border/50 opacity-50 grayscale-[60%] scale-95 hover:opacity-85 hover:grayscale-[20%] hover:scale-[0.98] transition-all duration-300';
+  const offLabelStyle = 'text-text-muted font-medium';
+  const offValueStyle = 'text-text-secondary/70';
 
-  const activeRing = {
-    teal: 'ring-2 ring-teal-glow shadow-[0_0_15px_rgba(13,92,77,0.4)] scale-[1.02]',
-    blue: 'ring-2 ring-status-open shadow-[0_0_15px_rgba(59,130,246,0.3)] scale-[1.02]',
-    purple: 'ring-2 ring-status-in-progress shadow-[0_0_15px_rgba(168,85,247,0.3)] scale-[1.02]',
-    green: 'ring-2 ring-status-resolved shadow-[0_0_15px_rgba(34,197,94,0.3)] scale-[1.02]',
-  };
+  const currentActive = activeStyles[color];
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`glass-card p-6 bg-gradient-to-br text-left transition-all duration-[var(--transition-fast)] cursor-pointer ${colorMap[color]} ${
-        isActive ? activeRing[color] : 'opacity-80 hover:opacity-100'
+      className={`glass-card p-6 text-left transition-all duration-300 ease-out cursor-pointer relative overflow-hidden ${
+        isActive ? currentActive.card : offCardStyle
       }`}
       style={{ animationDelay: `${delay * 80}ms`, animationFillMode: 'both' }}
     >
       <div className="flex items-center justify-between">
-        <p className="text-sm text-text-secondary font-medium">{label}</p>
-        {isActive && (
-          <span className="w-2 h-2 rounded-full bg-teal-glow animate-pulse" />
-        )}
+        <p className={`text-sm transition-colors duration-300 ${isActive ? currentActive.label : offLabelStyle}`}>
+          {label}
+        </p>
+        <span
+          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider font-bold border transition-all duration-300 ${
+            isActive
+              ? currentActive.badge
+              : 'bg-surface/50 border-border/30 text-text-muted/60'
+          }`}
+        >
+          <span
+            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+              isActive ? `${currentActive.dot} animate-pulse` : 'bg-text-muted/40'
+            }`}
+          />
+          {isActive ? 'ON' : 'OFF'}
+        </span>
       </div>
+
       {loading ? (
-        <div className="h-9 w-16 bg-surface/50 rounded-lg animate-pulse mt-2" />
+        <div className="h-9 w-16 bg-surface/50 rounded-lg animate-pulse mt-3" />
       ) : (
-        <p className={`text-4xl font-bold mt-2 ${textColor[color]}`}>{value}</p>
+        <p
+          className={`text-4xl font-extrabold mt-3 transition-all duration-300 ${
+            isActive ? currentActive.value : offValueStyle
+          }`}
+        >
+          {value}
+        </p>
       )}
     </button>
   );

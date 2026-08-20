@@ -5,68 +5,65 @@ interface LanguageSwitcherProps {
   className?: string;
 }
 
-export default function LanguageSwitcher({ variant = 'compact', className = '' }: LanguageSwitcherProps) {
+export default function LanguageSwitcher({ className = '' }: LanguageSwitcherProps) {
   const { i18n } = useTranslation();
   const currentLang = i18n.resolvedLanguage?.startsWith('es') ? 'es' : 'en';
 
-  const toggleLanguage = (lang: 'en' | 'es') => {
-    i18n.changeLanguage(lang);
+  const toggleLanguage = () => {
+    const nextLang = currentLang === 'en' ? 'es' : 'en';
+    i18n.changeLanguage(nextLang);
   };
 
-  if (variant === 'full') {
-    return (
-      <div className={`flex items-center gap-1 bg-obsidian p-1 rounded-xl border border-border ${className}`}>
-        <button
-          type="button"
-          onClick={() => toggleLanguage('en')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
-            currentLang === 'en'
-              ? 'bg-teal/20 text-teal-glow border border-teal/30 shadow-[var(--shadow-glow-teal)]'
-              : 'text-text-muted hover:text-text-primary'
-          }`}
-        >
-          <span>🇺🇸</span>
-          <span>EN</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => toggleLanguage('es')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
-            currentLang === 'es'
-              ? 'bg-teal/20 text-teal-glow border border-teal/30 shadow-[var(--shadow-glow-teal)]'
-              : 'text-text-muted hover:text-text-primary'
-          }`}
-        >
-          <span>🇪🇸</span>
-          <span>ES</span>
-        </button>
-      </div>
-    );
-  }
+  const setLanguage = (lang: 'en' | 'es') => {
+    if (currentLang !== lang) {
+      i18n.changeLanguage(lang);
+    }
+  };
 
   return (
-    <div className={`inline-flex items-center bg-obsidian/60 p-1 rounded-lg border border-border/80 ${className}`}>
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={toggleLanguage}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          toggleLanguage();
+        }
+      }}
+      className={`relative inline-flex items-center w-[74px] h-[32px] p-1 rounded-full bg-obsidian-light border border-border/80 shadow-inner cursor-pointer select-none group hover:border-teal/50 transition-colors ${className}`}
+      title={currentLang === 'en' ? 'Switch to Spanish' : 'Cambiar a Inglés'}
+    >
+      {/* Sliding illuminated thumb */}
+      <div
+        className={`absolute top-1 bottom-1 w-[32px] rounded-full bg-gradient-to-r from-teal to-teal-glow shadow-[0_0_12px_rgba(20,184,154,0.5)] transition-all duration-300 ease-out z-0 ${
+          currentLang === 'en' ? 'left-1' : 'left-[37px]'
+        }`}
+      />
+
+      {/* EN option */}
       <button
         type="button"
-        onClick={() => toggleLanguage('en')}
-        className={`px-2 py-1 rounded text-xs font-bold transition-all ${
-          currentLang === 'en'
-            ? 'bg-teal text-white shadow-sm'
-            : 'text-text-muted hover:text-text-secondary'
+        onClick={(e) => {
+          e.stopPropagation();
+          setLanguage('en');
+        }}
+        className={`relative z-10 flex-1 text-center text-xs font-extrabold tracking-wider transition-colors duration-300 cursor-pointer ${
+          currentLang === 'en' ? 'text-white' : 'text-text-muted hover:text-text-secondary'
         }`}
-        title="English"
       >
         EN
       </button>
+
+      {/* ES option */}
       <button
         type="button"
-        onClick={() => toggleLanguage('es')}
-        className={`px-2 py-1 rounded text-xs font-bold transition-all ${
-          currentLang === 'es'
-            ? 'bg-teal text-white shadow-sm'
-            : 'text-text-muted hover:text-text-secondary'
+        onClick={(e) => {
+          e.stopPropagation();
+          setLanguage('es');
+        }}
+        className={`relative z-10 flex-1 text-center text-xs font-extrabold tracking-wider transition-colors duration-300 cursor-pointer ${
+          currentLang === 'es' ? 'text-white' : 'text-text-muted hover:text-text-secondary'
         }`}
-        title="Español"
       >
         ES
       </button>

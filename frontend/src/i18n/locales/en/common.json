@@ -5,6 +5,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "tickets": "Tickets",
+    "backlog": "Backlog",
     "new_ticket": "New Ticket"
   },
   "roles": {
