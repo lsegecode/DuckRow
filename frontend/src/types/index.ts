@@ -67,6 +67,7 @@ export interface Ticket {
   assigned_at?: string | null;
   resolved_at?: string | null;
   estimated_resolution_time?: string | null;
+  estimated_work_hours?: string | null;
   resolution_documentation?: string | null;
   created_at: string;
   updated_at: string;
@@ -90,7 +91,9 @@ export interface TicketUpdatePayload {
   internal_priority?: Priority;
   assigned_to_id?: number | null;
   estimated_resolution_time?: string | null;
+  estimated_work_hours?: string | null;
   resolution_documentation?: string | null;
+  resolved_at?: string | null;
 }
 
 export interface TicketStats {

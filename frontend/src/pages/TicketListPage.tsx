@@ -10,10 +10,11 @@ import TicketTypeBadge from '../components/TicketTypeBadge';
 import UserAvatar from '../components/UserAvatar';
 import TicketBoardView from '../components/TicketBoardView';
 import { useAuth } from '../context/AuthContext';
+import { formatDate } from '../utils/dateUtils';
 
 export default function TicketListPage() {
   const { role } = useAuth();
-  const { t, i18n } = useTranslation(['tickets', 'common']);
+  const { t } = useTranslation(['tickets', 'common']);
   const [searchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [typeFilter, setTypeFilter] = useState<string>('');
@@ -62,7 +63,6 @@ export default function TicketListPage() {
   };
 
   const showCreateButton = true;
-  const dateLocale = i18n.language?.startsWith('es') ? 'es-ES' : 'en-US';
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
@@ -286,22 +286,20 @@ export default function TicketListPage() {
                       </p>
                     </div>
                     <p className="text-xs text-text-muted mt-1 md:hidden">
-                      {ticket.source_area.name} &middot; {new Date(ticket.created_at).toLocaleDateString(dateLocale)}
+                      {ticket.source_area.name} &middot; {formatDate(ticket.created_at)}
                     </p>
                     <p className="hidden md:block text-xs text-text-muted mt-1">
-                      {t('tickets:table.created_by')} {ticket.created_by.first_name || ticket.created_by.username} &middot; {new Date(ticket.created_at).toLocaleDateString(dateLocale)}
+                      {t('tickets:table.created_by')} {ticket.created_by.first_name || ticket.created_by.username} &middot; {formatDate(ticket.created_at)}
                     </p>
                   </div>
                   <div className="hidden md:block col-span-2 text-sm text-text-secondary">
                     {ticket.source_area.name}
                   </div>
-                  <div className="col-span-2 flex items-center md:block">
+                  <div className="col-span-2 flex items-center gap-1.5">
                     <span className="md:hidden text-xs text-text-secondary mr-2">{t('tickets:table.urgency')}:</span>
                     <UrgencyBadge level={ticket.urgency} />
                     {role !== 'CLIENT' && ticket.internal_priority && (
-                      <span className="ml-1.5">
-                        <UrgencyBadge level={ticket.internal_priority} type="priority" />
-                      </span>
+                      <UrgencyBadge level={ticket.internal_priority} type="priority" />
                     )}
                   </div>
                   {role !== 'CLIENT' && (

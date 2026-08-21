@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import TicketTypeBadge from './TicketTypeBadge';
 import UrgencyBadge from './UrgencyBadge';
 import UserAvatar from './UserAvatar';
+import { formatDate, formatDateTime } from '../utils/dateUtils';
 import type { Ticket, TicketStatus, Priority } from '../types';
 
 interface TicketBoardCardProps {
@@ -16,7 +17,7 @@ interface TicketBoardCardProps {
 
 export default function TicketBoardCard({ ticket, columnType }: TicketBoardCardProps) {
   const { role } = useAuth();
-  const { t, i18n } = useTranslation(['tickets', 'common']);
+  const { t } = useTranslation(['tickets', 'common']);
   const queryClient = useQueryClient();
   const [isChangingPriority, setIsChangingPriority] = useState(false);
 
@@ -91,11 +92,7 @@ export default function TicketBoardCard({ ticket, columnType }: TicketBoardCardP
     updateMutation.mutate({ internal_priority: newPriority });
   };
 
-  const dateLocale = i18n.language?.startsWith('es') ? 'es-ES' : 'en-US';
-  const createdDate = new Date(ticket.created_at).toLocaleDateString(dateLocale, {
-    month: 'short',
-    day: 'numeric',
-  });
+
 
   return (
     <div className="glass-card p-4 rounded-xl border border-border hover:border-teal/50 transition-all duration-[var(--transition-fast)] shadow-md hover:shadow-[var(--shadow-glow-teal)] flex flex-col justify-between group space-y-3 bg-obsidian-light/80 backdrop-blur-md">
@@ -114,7 +111,7 @@ export default function TicketBoardCard({ ticket, columnType }: TicketBoardCardP
 
             {/* Internal Priority (Staff only) */}
             {isStaff && (
-              <div className="relative">
+              <div className="relative flex items-center">
                 {isChangingPriority ? (
                   <select
                     autoFocus
@@ -133,12 +130,12 @@ export default function TicketBoardCard({ ticket, columnType }: TicketBoardCardP
                     type="button"
                     onClick={() => setIsChangingPriority(true)}
                     title={t('board.action_priority')}
-                    className="cursor-pointer hover:scale-105 transition-transform"
+                    className="cursor-pointer hover:scale-105 transition-transform flex items-center justify-center p-0 m-0 border-0 bg-transparent outline-none leading-none"
                   >
                     {ticket.internal_priority ? (
                       <UrgencyBadge level={ticket.internal_priority} type="priority" />
                     ) : (
-                      <span className="text-[10px] px-1.5 py-0.5 bg-surface text-text-muted rounded border border-border">
+                      <span className="text-[10px] px-1.5 py-0.5 bg-surface text-text-muted rounded border border-border flex items-center">
                         + {t('board.action_priority')}
                       </span>
                     )}
@@ -162,8 +159,8 @@ export default function TicketBoardCard({ ticket, columnType }: TicketBoardCardP
           <span className="px-2 py-0.5 rounded-md bg-surface text-text-secondary border border-border/60">
             🏢 {ticket.source_area.name}
           </span>
-          <span title={new Date(ticket.created_at).toLocaleString(dateLocale)}>
-            🕒 {createdDate}
+          <span title={formatDateTime(ticket.created_at)}>
+            🕒 {formatDate(ticket.created_at)}
           </span>
         </div>
       </div>

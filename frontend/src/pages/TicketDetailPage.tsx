@@ -9,6 +9,7 @@ import StatusBadge from '../components/StatusBadge';
 import UrgencyBadge from '../components/UrgencyBadge';
 import TicketTypeBadge from '../components/TicketTypeBadge';
 import StructuredDescription from '../components/StructuredDescription';
+import { formatDateTime, formatDuration } from '../utils/dateUtils';
 import type { Ticket, TicketStatus, Priority, UserProfile } from '../types';
 
 export default function TicketDetailPage() {
@@ -22,6 +23,8 @@ export default function TicketDetailPage() {
   const [priorityVal, setPriorityVal] = useState<Priority | ''>('');
   const [assignedToVal, setAssignedToVal] = useState<number | ''>('');
   const [estimatedResolutionVal, setEstimatedResolutionVal] = useState('');
+  const [estimatedWorkVal, setEstimatedWorkVal] = useState('');
+  const [resolvedAtVal, setResolvedAtVal] = useState('');
   const [resDocs, setResDocs] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -41,6 +44,12 @@ export default function TicketDetailPage() {
       setEstimatedResolutionVal(
         ticket.estimated_resolution_time
           ? new Date(ticket.estimated_resolution_time).toISOString().slice(0, 16)
+          : ''
+      );
+      setEstimatedWorkVal(ticket.estimated_work_hours || '');
+      setResolvedAtVal(
+        ticket.resolved_at
+          ? new Date(ticket.resolved_at).toISOString().slice(0, 16)
           : ''
       );
       setResDocs(ticket.resolution_documentation || '');
@@ -83,7 +92,26 @@ export default function TicketDetailPage() {
     },
   });
 
-  const dateLocale = i18n.language?.startsWith('es') ? 'es-ES' : 'en-US';
+
+  // Always reset resolvedAtVal when status changes to RESOLVED/CLOSED (pre-fill with now)
+  const handleStatusChange = (val: TicketStatus | '') => {
+    setStatusVal(val);
+    if ((val === 'RESOLVED' || val === 'CLOSED') && ticket) {
+      // Only pre-fill if the ticket wasn't already resolved (avoid overwriting existing date)
+      const existing = ticket.resolved_at
+        ? new Date(ticket.resolved_at).toISOString().slice(0, 16)
+        : '';
+      setResolvedAtVal(existing || new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+    }
+  };
+
+  // Live duration preview for the resolved_at picker
+  const resolvedAtPreviewDuration = (() => {
+    if (!resolvedAtVal || !ticket) return null;
+    return formatDuration(ticket.created_at, new Date(resolvedAtVal).toISOString(), i18n.language);
+  })();
+
+  const resolutionDuration = ticket ? formatDuration(ticket.created_at, ticket.resolved_at, i18n.language) : null;
 
   if (isLoading) {
     return (
@@ -118,12 +146,22 @@ export default function TicketDetailPage() {
       payload.internal_priority = priorityVal || undefined;
       payload.assigned_to_id = assignedToVal ? Number(assignedToVal) : null;
       payload.estimated_resolution_time = estimatedResolutionVal ? new Date(estimatedResolutionVal).toISOString() : null;
+      payload.estimated_work_hours = estimatedWorkVal || null;
       payload.resolution_documentation = resDocs || null;
+      // Include explicit resolved_at when resolving/closing
+      if (statusVal === 'RESOLVED' || statusVal === 'CLOSED') {
+        payload.resolved_at = resolvedAtVal ? new Date(resolvedAtVal).toISOString() : null;
+      }
     } else if (role === 'RESOLVER') {
       payload.status = statusVal;
       payload.internal_priority = priorityVal || undefined;
       payload.estimated_resolution_time = estimatedResolutionVal ? new Date(estimatedResolutionVal).toISOString() : null;
+      payload.estimated_work_hours = estimatedWorkVal || null;
       payload.resolution_documentation = resDocs || null;
+      // Include explicit resolved_at when resolving/closing
+      if (statusVal === 'RESOLVED' || statusVal === 'CLOSED') {
+        payload.resolved_at = resolvedAtVal ? new Date(resolvedAtVal).toISOString() : null;
+      }
     }
 
     updateTicketMutation.mutate(payload);
@@ -146,9 +184,6 @@ export default function TicketDetailPage() {
   const canClaim = isUnassigned && (role === 'RESOLVER' || role === 'SYSADMIN');
   const canUpdate = role === 'SYSADMIN' || (role === 'RESOLVER' && (isAssignedResolver || isUnassigned));
   const canDelete = role === 'SYSADMIN';
-
-  // Duration calculation
-  const resolutionDuration = formatDuration(ticket.created_at, ticket.resolved_at);
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-fade-in">
@@ -187,7 +222,7 @@ export default function TicketDetailPage() {
                 <h1 className="text-2xl font-bold text-text-primary">{ticket.title}</h1>
                 <p className="text-xs text-text-secondary mt-1.5">
                   {t('tickets:detail.submitted_by')}{' '}
-                  <span className="font-semibold text-text-primary">{ticket.created_by.first_name || ticket.created_by.username}</span> &middot; {new Date(ticket.created_at).toLocaleString(dateLocale)}
+                  <span className="font-semibold text-text-primary">{ticket.created_by.first_name || ticket.created_by.username}</span> &middot; {formatDateTime(ticket.created_at)}
                 </p>
               </div>
               <div className="flex gap-2 items-center">
@@ -259,6 +294,11 @@ export default function TicketDetailPage() {
                           ? new Date(ticket.estimated_resolution_time).toISOString().slice(0, 16)
                           : ''
                       );
+                      setResolvedAtVal(
+                        ticket.resolved_at
+                          ? new Date(ticket.resolved_at).toISOString().slice(0, 16)
+                          : ''
+                      );
                       setResDocs(ticket.resolution_documentation || '');
                       setIsEditing(true);
                     }}
@@ -291,6 +331,23 @@ export default function TicketDetailPage() {
                       </div>
                     )}
 
+                    {/* Status selector — SYSADMIN & RESOLVER, using handleStatusChange to pre-fill resolvedAtVal */}
+                    <div>
+                      <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                        {t('tickets:table.status')}
+                      </label>
+                      <select
+                        value={statusVal}
+                        onChange={(e) => handleStatusChange(e.target.value as TicketStatus)}
+                        className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none cursor-pointer"
+                      >
+                        <option value="OPEN">{t('tickets:status.OPEN')}</option>
+                        <option value="IN_PROGRESS">{t('tickets:status.IN_PROGRESS')}</option>
+                        <option value="RESOLVED">{t('tickets:status.RESOLVED')}</option>
+                        <option value="CLOSED">{t('tickets:status.CLOSED')}</option>
+                      </select>
+                    </div>
+
                     {/* Sysadmin Field (Assign) */}
                     {role === 'SYSADMIN' && (
                       <div>
@@ -313,56 +370,97 @@ export default function TicketDetailPage() {
                     )}
                   </div>
 
-                  {/* Estimated Resolution Time (Datetime or Hours presets) */}
-                  <div className="p-4 rounded-xl bg-obsidian/70 border border-border/80 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                        ⏱️ {t('tickets:detail.estimated_resolution')}
-                      </label>
-                      {estimatedResolutionVal && (
-                        <button
-                          type="button"
-                          onClick={() => setEstimatedResolutionVal('')}
-                          className="text-[11px] text-urgency-high hover:underline"
-                        >
-                          {t('common:actions.clear')}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Quick Hours Presets */}
-                    <div>
-                      <span className="text-[11px] text-text-muted block mb-1.5">
-                        {i18n.language?.startsWith('es') ? 'Calcular a partir de ahora:' : 'Add hours from now:'}
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {[1, 2, 4, 8, 24, 48].map((hrs) => (
+                  {/* Dual Estimation: Expected Delivery Date & Estimated Work Effort */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Expected Delivery Date (External Target) */}
+                    <div className="p-4 rounded-xl bg-obsidian/70 border border-border/80 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                          {t('tickets:detail.estimated_delivery_label')}
+                        </label>
+                        {estimatedResolutionVal && (
                           <button
-                            key={hrs}
                             type="button"
-                            onClick={() => {
-                              const target = new Date(Date.now() + hrs * 3600 * 1000);
-                              // Format as YYYY-MM-DDTHH:mm in local time
-                              const localIso = new Date(target.getTime() - target.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-                              setEstimatedResolutionVal(localIso);
-                            }}
-                            className="px-2.5 py-1 rounded-lg bg-surface hover:bg-teal/20 hover:text-teal-glow text-text-secondary border border-border text-xs font-semibold transition-all cursor-pointer active:scale-95"
+                            onClick={() => setEstimatedResolutionVal('')}
+                            className="px-2 py-0.5 rounded-md bg-urgency-high/15 hover:bg-urgency-high/25 text-urgency-high border border-urgency-high/30 text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer"
                           >
-                            +{hrs >= 24 ? `${hrs / 24}d` : `${hrs}h`}
+                            ✕ {t('common:actions.clear')}
                           </button>
-                        ))}
+                        )}
                       </div>
-                    </div>
+                      <p className="text-[11px] text-text-muted">{t('tickets:detail.estimated_delivery_hint')}</p>
 
-                    {/* Datetime picker */}
-                    <div>
-                      <span className="text-[11px] text-text-muted block mb-1.5">
-                        {i18n.language?.startsWith('es') ? 'O selecciona fecha y hora exacta:' : 'Or choose specific date & time:'}
-                      </span>
+                      {/* Quick Target Presets */}
+                      <div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[1, 2, 4, 8, 24, 48].map((hrs) => (
+                            <button
+                              key={hrs}
+                              type="button"
+                              onClick={() => {
+                                const target = new Date(Date.now() + hrs * 3600 * 1000);
+                                const localIso = new Date(target.getTime() - target.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                                setEstimatedResolutionVal(localIso);
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-surface hover:bg-teal/20 hover:text-teal-glow text-text-secondary border border-border text-xs font-semibold transition-all cursor-pointer active:scale-95"
+                            >
+                              +{hrs >= 24 ? `${hrs / 24}d` : `${hrs}h`}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
                       <input
                         type="datetime-local"
                         value={estimatedResolutionVal}
                         onChange={(e) => setEstimatedResolutionVal(e.target.value)}
+                        className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none [color-scheme:dark]"
+                      />
+                    </div>
+
+                    {/* Estimated Active Work Effort (Internal Effort) */}
+                    <div className="p-4 rounded-xl bg-obsidian/70 border border-border/80 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                          {t('tickets:detail.estimated_work_label')}
+                        </label>
+                        {estimatedWorkVal && (
+                          <button
+                            type="button"
+                            onClick={() => setEstimatedWorkVal('')}
+                            className="px-2 py-0.5 rounded-md bg-urgency-high/15 hover:bg-urgency-high/25 text-urgency-high border border-urgency-high/30 text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                          >
+                            ✕ {t('common:actions.clear')}
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-text-muted">{t('tickets:detail.estimated_work_hint')}</p>
+
+                      {/* Quick Work Effort Presets */}
+                      <div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {['15m', '30m', '1h', '2h', '4h', '8h'].map((eff) => (
+                            <button
+                              key={eff}
+                              type="button"
+                              onClick={() => setEstimatedWorkVal(eff)}
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
+                                estimatedWorkVal === eff
+                                  ? 'bg-teal text-white border-teal'
+                                  : 'bg-surface hover:bg-teal/20 hover:text-teal-glow text-text-secondary border-border'
+                              }`}
+                            >
+                              {eff}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <input
+                        type="text"
+                        placeholder="e.g. 1h 30m"
+                        value={estimatedWorkVal}
+                        onChange={(e) => setEstimatedWorkVal(e.target.value)}
                         className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none"
                       />
                     </div>
@@ -370,19 +468,53 @@ export default function TicketDetailPage() {
 
                   {/* Resolution Docs Field */}
                   {(statusVal === 'RESOLVED' || statusVal === 'CLOSED') && (
-                    <div>
-                      <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                        {t('tickets:detail.resolution_docs_heading')}
-                      </label>
-                      <textarea
-                        required
-                        rows={4}
-                        placeholder={t('tickets:detail.resolution_placeholder')}
-                        value={resDocs}
-                        onChange={(e) => setResDocs(e.target.value)}
-                        className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none resize-none"
-                      />
-                    </div>
+                    <>
+                      {/* Resolved At — backdatable datetime picker */}
+                      <div className="p-4 rounded-xl bg-status-resolved/5 border border-status-resolved/20 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-xs font-semibold text-status-resolved uppercase tracking-wider">
+                            {t('tickets:detail.resolved_at_label')}
+                          </label>
+                          {resolvedAtVal && (
+                            <button
+                              type="button"
+                              onClick={() => setResolvedAtVal('')}
+                              className="px-2 py-0.5 rounded-md bg-urgency-high/15 hover:bg-urgency-high/25 text-urgency-high border border-urgency-high/30 text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                            >
+                              ✕ {t('common:actions.clear')}
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-text-muted">{t('tickets:detail.resolved_at_hint')}</p>
+                        <input
+                          type="datetime-local"
+                          value={resolvedAtVal}
+                          max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+                          onChange={(e) => setResolvedAtVal(e.target.value)}
+                          className="w-full px-3 py-2 bg-obsidian border border-status-resolved/30 rounded-lg text-text-primary text-sm focus:border-status-resolved outline-none [color-scheme:dark]"
+                        />
+                        {resolvedAtPreviewDuration && (
+                          <p className="text-xs font-semibold text-status-resolved">
+                            {t('tickets:detail.resolution_duration_preview', { duration: resolvedAtPreviewDuration })}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Resolution documentation */}
+                      <div>
+                        <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                          {t('tickets:detail.resolution_docs_heading')}
+                        </label>
+                        <textarea
+                          required
+                          rows={4}
+                          placeholder={t('tickets:detail.resolution_placeholder')}
+                          value={resDocs}
+                          onChange={(e) => setResDocs(e.target.value)}
+                          className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none resize-none"
+                        />
+                      </div>
+                    </>
                   )}
 
                   {/* Edit buttons */}
@@ -486,7 +618,7 @@ export default function TicketDetailPage() {
                     <span>{t('tickets:detail.created_date')}</span>
                   </span>
                   <span className="font-medium text-text-primary mt-0.5 block text-xs">
-                    {new Date(ticket.created_at).toLocaleString(dateLocale)}
+                    {formatDateTime(ticket.created_at)}
                   </span>
                 </div>
 
@@ -498,22 +630,37 @@ export default function TicketDetailPage() {
                   </span>
                   <span className="font-medium text-text-primary mt-0.5 block text-xs">
                     {ticket.assigned_at ? (
-                      new Date(ticket.assigned_at).toLocaleString(dateLocale)
+                      formatDateTime(ticket.assigned_at)
                     ) : (
                       <span className="text-text-muted italic">{t('tickets:detail.not_assigned_yet')}</span>
                     )}
                   </span>
                 </div>
 
-                {/* Expected Time of Solution */}
+                {/* Expected Delivery Date (Target) */}
                 <div>
                   <span className="text-xs text-text-secondary flex items-center gap-1.5">
-                    <span>⏱️</span>
-                    <span>{t('tickets:detail.estimated_resolution')}</span>
+                    <span>📅</span>
+                    <span>{t('tickets:detail.estimated_delivery_label')}</span>
                   </span>
                   <span className="font-medium text-teal-glow mt-0.5 block text-xs">
                     {ticket.estimated_resolution_time ? (
-                      new Date(ticket.estimated_resolution_time).toLocaleString(dateLocale)
+                      formatDateTime(ticket.estimated_resolution_time)
+                    ) : (
+                      <span className="text-text-muted italic">{t('tickets:detail.not_set')}</span>
+                    )}
+                  </span>
+                </div>
+
+                {/* Estimated Active Work Effort */}
+                <div>
+                  <span className="text-xs text-text-secondary flex items-center gap-1.5">
+                    <span>⏱️</span>
+                    <span>{t('tickets:detail.estimated_work_label')}</span>
+                  </span>
+                  <span className="font-medium text-text-primary mt-0.5 block text-xs">
+                    {ticket.estimated_work_hours ? (
+                      ticket.estimated_work_hours
                     ) : (
                       <span className="text-text-muted italic">{t('tickets:detail.not_set')}</span>
                     )}
@@ -528,7 +675,7 @@ export default function TicketDetailPage() {
                   </span>
                   <span className="font-medium text-text-primary mt-0.5 block text-xs">
                     {ticket.resolved_at ? (
-                      new Date(ticket.resolved_at).toLocaleString(dateLocale)
+                      formatDateTime(ticket.resolved_at)
                     ) : (
                       <span className="text-text-muted italic">{t('tickets:detail.not_closed_yet')}</span>
                     )}
@@ -551,7 +698,7 @@ export default function TicketDetailPage() {
                 {/* Last Updated */}
                 <div className="pt-1">
                   <span className="text-[11px] text-text-muted block">
-                    {t('tickets:detail.last_updated')}: {new Date(ticket.updated_at).toLocaleString(dateLocale)}
+                    {t('tickets:detail.last_updated')}: {formatDateTime(ticket.updated_at)}
                   </span>
                 </div>
               </div>
@@ -596,22 +743,4 @@ export default function TicketDetailPage() {
 
 // ── Helpers ──
 
-function formatDuration(startDateStr?: string | null, endDateStr?: string | null): string | null {
-  if (!startDateStr || !endDateStr) return null;
-  const start = new Date(startDateStr).getTime();
-  const end = new Date(endDateStr).getTime();
-  if (isNaN(start) || isNaN(end) || end < start) return null;
 
-  const diffMs = end - start;
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return '< 1 min';
-  if (diffMins < 60) return `${diffMins} min`;
-
-  const diffHours = Math.floor(diffMins / 60);
-  const remMins = diffMins % 60;
-  if (diffHours < 24) return `${diffHours}h ${remMins > 0 ? `${remMins}m` : ''}`.trim();
-
-  const diffDays = Math.floor(diffHours / 24);
-  const remHours = diffHours % 24;
-  return `${diffDays}d ${remHours > 0 ? `${remHours}h` : ''}`.trim();
-}

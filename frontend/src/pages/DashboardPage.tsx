@@ -11,6 +11,7 @@ import { ticketsApi } from '../api/tickets';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/StatusBadge';
 import UrgencyBadge from '../components/UrgencyBadge';
+import { formatDate } from '../utils/dateUtils';
 import type { Ticket } from '../types';
 
 export default function DashboardPage() {
@@ -144,7 +145,7 @@ export default function DashboardPage() {
                     {ticket.title}
                   </p>
                   <p className="text-xs text-text-muted mt-0.5">
-                    {ticket.source_area.name} &middot; {formatTimeAgo(ticket.created_at, t, i18n.language)}
+                    {ticket.source_area.name} &middot; {formatTimeAgo(ticket.created_at, t)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -271,7 +272,7 @@ function getGreeting(t: (key: string) => string): string {
   return t('dashboard:greeting_evening');
 }
 
-function formatTimeAgo(dateStr: string, t: (key: string, opts?: any) => string, lang: string): string {
+function formatTimeAgo(dateStr: string, t: (key: string, opts?: any) => string): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -283,5 +284,5 @@ function formatTimeAgo(dateStr: string, t: (key: string, opts?: any) => string, 
   if (diffMins < 60) return t('dashboard:time.minutes_ago', { count: diffMins });
   if (diffHrs < 24) return t('dashboard:time.hours_ago', { count: diffHrs });
   if (diffDays < 7) return t('dashboard:time.days_ago', { count: diffDays });
-  return date.toLocaleDateString(lang.startsWith('es') ? 'es-ES' : 'en-US');
+  return formatDate(dateStr);
 }

@@ -69,7 +69,11 @@
     "assigned_staff": "Assigned Staff",
     "created_date": "Creation Date",
     "assigned_date": "Assign Date (Start)",
-    "estimated_resolution": "Expected Time of Solution",
+    "estimated_resolution": "Expected Delivery Date",
+    "estimated_delivery_label": "📅 Expected Delivery Date (Target)",
+    "estimated_delivery_hint": "Target date & time when the solution will be delivered to the client.",
+    "estimated_work_label": "⏱️ Estimated Work Effort (Active Time)",
+    "estimated_work_hint": "Amount of active work effort required (e.g., 1h, 2h 30m, even if scheduled for later).",
     "closed_date": "Closed Date",
     "actual_resolution_time": "Actual Time of Resolution",
     "not_assigned_yet": "Not assigned yet",
@@ -85,7 +89,10 @@
     "not_found_desc": "The ticket you are looking for does not exist or you lack permission to view it.",
     "resolution_placeholder": "Explain how this issue was resolved...",
     "enlarge_image": "Click to enlarge",
-    "close_preview": "Close preview"
+    "close_preview": "Close preview",
+    "resolved_at_label": "📅 When was it resolved?",
+    "resolved_at_hint": "You can set a past date if the resolution happened earlier.",
+    "resolution_duration_preview": "Duration: {{duration}}"
   },
   "wizard": {
     "step_context": "Context",

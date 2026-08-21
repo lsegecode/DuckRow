@@ -57,11 +57,11 @@ export default function UrgencyBadge({ level, type = 'urgency', size = 'sm' }: U
   const sizeClass =
     size === 'md'
       ? 'w-6 h-6 text-xs'
-      : 'w-5 h-5 text-[11px]';
+      : 'w-5 h-5 text-[10px]';
 
   return (
     <span
-      className={`inline-flex items-center justify-center ${sizeClass} font-bold rounded-md border ${style.bg} ${style.text} ${style.border} ${style.glow} select-none cursor-default transition-all`}
+      className={`inline-flex items-center justify-center shrink-0 ${sizeClass} font-bold rounded-full border ${style.bg} ${style.text} ${style.border} ${style.glow} select-none cursor-default transition-all leading-none`}
       title={`${titleType} (${prefix}): ${label}`}
     >
       {prefix}

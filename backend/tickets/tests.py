@@ -135,3 +135,80 @@ class TicketPermissionAndScopeTests(APITestCase):
         
         response = self.client.patch(f'/api/v1/tickets/tickets/{self.ticket_hr.id}/', payload)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_resolver_past_date_resolution(self):
+        """Test that a RESOLVER can set a past resolved_at timestamp when resolving a ticket."""
+        self.login_jwt(self.resolver)
+        from django.utils import timezone
+        import datetime
+        
+        now = timezone.now()
+        created_time = now - datetime.timedelta(hours=5)
+        past_time = (now - datetime.timedelta(hours=2)).isoformat()
+        
+        # Move creation date to 5 hours ago so resolved_at (2 hours ago) is valid
+        Ticket.objects.filter(id=self.ticket_it.id).update(created_at=created_time)
+        self.ticket_it.refresh_from_db()
+        
+        payload = {
+            'status': 'RESOLVED',
+            'resolved_at': past_time,
+            'resolution_documentation': 'Resolved 2 hours ago.'
+        }
+        
+        response = self.client.patch(f'/api/v1/tickets/tickets/{self.ticket_it.id}/', payload)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        self.ticket_it.refresh_from_db()
+        self.assertEqual(self.ticket_it.status, 'RESOLVED')
+        self.assertIsNotNone(self.ticket_it.resolved_at)
+
+    def test_resolver_past_date_before_created_at_fails(self):
+        """Test that setting a resolved_at timestamp before ticket created_at returns 400 validation error."""
+        self.login_jwt(self.resolver)
+        from django.utils import timezone
+        import datetime
+        
+        # 1 day before creation
+        invalid_past_time = (self.ticket_it.created_at - datetime.timedelta(days=1)).isoformat()
+        
+        payload = {
+            'status': 'RESOLVED',
+            'resolved_at': invalid_past_time,
+            'resolution_documentation': 'Invalid past resolution.'
+        }
+        
+        response = self.client.patch(f'/api/v1/tickets/tickets/{self.ticket_it.id}/', payload)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('resolved_at', response.data)
+
+    def test_status_multi_value_filter(self):
+        """Test that filtering tickets with comma-separated status values (e.g. status=RESOLVED,CLOSED) works properly."""
+        self.ticket_it.status = 'RESOLVED'
+        self.ticket_it.save()
+
+        self.ticket_hr.status = 'CLOSED'
+        self.ticket_hr.save()
+
+        self.login_jwt(self.admin)
+        response = self.client.get('/api/v1/tickets/tickets/?status=RESOLVED,CLOSED')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 2)
+
+    def test_resolver_update_unassigned_ticket(self):
+        """Test that a RESOLVER can update an unassigned ticket (pool ticket) without 403 Forbidden."""
+        self.login_jwt(self.resolver)
+        payload = {'status': 'IN_PROGRESS'}
+        
+        response = self.client.patch(f'/api/v1/tickets/tickets/{self.ticket_hr.id}/', payload)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        self.ticket_hr.refresh_from_db()
+        self.assertEqual(self.ticket_hr.status, 'IN_PROGRESS')
+        self.assertEqual(self.ticket_hr.assigned_to, self.resolver)
+
+
+
+
+

@@ -17,14 +17,14 @@ import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/StatusBadge';
 import UrgencyBadge from '../components/UrgencyBadge';
 import TicketTypeBadge from '../components/TicketTypeBadge';
+import { formatDate } from '../utils/dateUtils';
 import type { Ticket } from '../types';
 
 const PAGE_SIZE = 10;
 
 export default function BacklogPage() {
   const { role } = useAuth();
-  const { t, i18n } = useTranslation(['backlog', 'common', 'tickets']);
-  const dateLocale = i18n.language?.startsWith('es') ? 'es-ES' : 'en-US';
+  const { t } = useTranslation(['backlog', 'common', 'tickets']);
 
   // Filters
   const [typeFilter, setTypeFilter] = useState('');
@@ -238,10 +238,10 @@ export default function BacklogPage() {
               <FilterChip label={t(`tickets:type.${typeFilter}`)} onRemove={() => setTypeFilter('')} />
             )}
             {dateFrom && (
-              <FilterChip label={`≥ ${dateFrom}`} onRemove={() => setDateFrom('')} />
+              <FilterChip label={`≥ ${formatDate(dateFrom)}`} onRemove={() => setDateFrom('')} />
             )}
             {dateTo && (
-              <FilterChip label={`≤ ${dateTo}`} onRemove={() => setDateTo('')} />
+              <FilterChip label={`≤ ${formatDate(dateTo)}`} onRemove={() => setDateTo('')} />
             )}
             {areaFilter && areas && (
               <FilterChip
@@ -321,13 +321,13 @@ export default function BacklogPage() {
                         </span>
                         <span className="text-text-muted/40 text-xs">·</span>
                         <span className="text-xs text-text-muted">
-                          {t('backlog:created_date')}: {new Date(ticket.created_at).toLocaleDateString(dateLocale)}
+                          {t('backlog:created_date')}: {formatDate(ticket.created_at)}
                         </span>
                         {ticket.resolved_at && (
                           <>
                             <span className="text-text-muted/40 text-xs">·</span>
                             <span className="text-xs text-status-resolved">
-                              {t('backlog:resolved_date')}: {new Date(ticket.resolved_at).toLocaleDateString(dateLocale)}
+                              {t('backlog:resolved_date')}: {formatDate(ticket.resolved_at)}
                             </span>
                           </>
                         )}

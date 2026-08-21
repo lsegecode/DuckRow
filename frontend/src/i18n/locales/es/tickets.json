@@ -69,7 +69,11 @@
     "assigned_staff": "Personal Asignado",
     "created_date": "Fecha de Creación",
     "assigned_date": "Fecha de Asignación (Inicio)",
-    "estimated_resolution": "Tiempo Estimado de Solución",
+    "estimated_resolution": "Fecha Estimada de Entrega",
+    "estimated_delivery_label": "📅 Fecha Estimada de Entrega (Objetivo)",
+    "estimated_delivery_hint": "Fecha y hora objetivo en que se entregará la solución al cliente.",
+    "estimated_work_label": "⏱️ Tiempo / Esfuerzo de Trabajo (Tiempo Activo)",
+    "estimated_work_hint": "Horas o tiempo de trabajo activo requeridos (ej. 1h, 2h 30m, aunque se entregue después).",
     "closed_date": "Fecha de Cierre",
     "actual_resolution_time": "Tiempo Real de Resolución",
     "not_assigned_yet": "Aún sin asignar",
@@ -85,7 +89,10 @@
     "not_found_desc": "El ticket que buscas no existe o no tienes permisos para visualizarlo.",
     "resolution_placeholder": "Explica cómo se resolvió este incidente...",
     "enlarge_image": "Clic para agrandar",
-    "close_preview": "Cerrar vista previa"
+    "close_preview": "Cerrar vista previa",
+    "resolved_at_label": "📅 ¿Cuándo fue resuelto?",
+    "resolved_at_hint": "Puedes ingresar una fecha pasada si la resolución ocurrió antes.",
+    "resolution_duration_preview": "Duración: {{duration}}"
   },
   "wizard": {
     "step_context": "Contexto",

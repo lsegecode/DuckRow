@@ -19,7 +19,7 @@ class CanCreateTicket(permissions.BasePermission):
 class CanUpdateTicket(permissions.BasePermission):
     """
     SYSADMIN: full update access.
-    RESOLVER: can only update tickets assigned to them.
+    RESOLVER: can update tickets assigned to them, tickets created by them, or unassigned pool tickets.
     CLIENT: no update access.
     """
 
@@ -30,6 +30,7 @@ class CanUpdateTicket(permissions.BasePermission):
             return True
 
         if role == 'RESOLVER':
-            return obj.assigned_to == request.user
+            return obj.assigned_to == request.user or obj.created_by == request.user or obj.assigned_to is None
 
         return False
+

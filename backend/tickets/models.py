@@ -110,6 +110,12 @@ class Ticket(models.Model):
         blank=True,
     )
 
+    estimated_work_hours = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+    )
+
     resolution_documentation = models.TextField(
         null=True,
         blank=True,
