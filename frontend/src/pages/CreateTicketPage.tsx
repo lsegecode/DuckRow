@@ -199,16 +199,8 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
         {/* Rubber Duck Mascot Panel */}
         <div className="md:col-span-4 glass-card p-6 flex flex-col items-center text-center space-y-4 bg-gradient-to-b from-teal/15 to-transparent">
-          <div className="w-20 h-20 rounded-full bg-teal/20 flex items-center justify-center animate-float border border-teal/20">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" className="text-teal-glow">
-              <path
-                d="M19.5 10.5c0-1.5-.5-3-1.5-4-1-1-2.5-2-4.5-2.5-.5-1.5-2-2.5-3.5-2.5-2 0-3.5 1.5-3.5 3.5 0 .3 0 .7.1 1C4.5 7 3 9 3 11.5c0 3 2 5.5 5 6.5v2c0 1.1.9 2 2 2h4c1.1 0 2-.9 2-2v-2c2.5-.8 4-3 4-5.5h-.5z"
-                fill="currentColor"
-                opacity="0.9"
-              />
-              <circle cx="8.5" cy="9" r="1" fill="#0B0F12" />
-              <path d="M12 11.5c.8 0 1.5.3 2 .8" stroke="#F2A900" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-            </svg>
+          <div className="w-24 h-24 rounded-full bg-teal/10 flex items-center justify-center animate-float border border-teal/20 p-2 overflow-hidden shadow-[var(--shadow-glow-teal)]">
+            <img src="/static/duckie.png" alt="Duckie Mascot" className="w-full h-full object-contain drop-shadow-md" />
           </div>
           <div>
             <h4 className="font-semibold text-text-primary">{t('tickets:wizard.mascot_quack')}</h4>
@@ -235,11 +227,10 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
                     <button
                       type="button"
                       onClick={() => setTicketType('BUG')}
-                      className={`p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                        ticketType === 'BUG'
-                          ? 'bg-rose-500/15 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.2)] text-rose-300'
-                          : 'bg-obsidian border-border text-text-secondary hover:border-border-light hover:bg-surface-hover/30'
-                      }`}
+                      className={`p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${ticketType === 'BUG'
+                        ? 'bg-rose-500/15 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.2)] text-rose-300'
+                        : 'bg-obsidian border-border text-text-secondary hover:border-border-light hover:bg-surface-hover/30'
+                        }`}
                     >
                       <div className="flex items-center gap-2">
                         <span className="text-xl">🐞</span>
@@ -253,11 +244,10 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
                     <button
                       type="button"
                       onClick={() => setTicketType('FEATURE')}
-                      className={`p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                        ticketType === 'FEATURE'
-                          ? 'bg-indigo-500/15 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.2)] text-indigo-300'
-                          : 'bg-obsidian border-border text-text-secondary hover:border-border-light hover:bg-surface-hover/30'
-                      }`}
+                      className={`p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${ticketType === 'FEATURE'
+                        ? 'bg-indigo-500/15 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.2)] text-indigo-300'
+                        : 'bg-obsidian border-border text-text-secondary hover:border-border-light hover:bg-surface-hover/30'
+                        }`}
                     >
                       <div className="flex items-center gap-2">
                         <span className="text-xl">✨</span>
@@ -464,11 +454,10 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
                       }
                     }}
                     onClick={() => fileInputRef.current?.click()}
-                    className={`p-6 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
-                      isDragging
-                        ? 'border-teal bg-teal/10 scale-[1.01]'
-                        : 'border-border hover:border-teal/50 bg-obsidian/60 hover:bg-surface/20'
-                    }`}
+                    className={`p-6 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-center cursor-pointer transition-all ${isDragging
+                      ? 'border-teal bg-teal/10 scale-[1.01]'
+                      : 'border-border hover:border-teal/50 bg-obsidian/60 hover:bg-surface/20'
+                      }`}
                   >
                     <div className="w-10 h-10 rounded-full bg-teal/15 flex items-center justify-center text-teal-glow mb-2">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -700,11 +689,10 @@ function WizardStepNum({ num, active, label }: WizardStepNumProps) {
   return (
     <div className="flex flex-col items-center gap-1">
       <div
-        className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border transition-all duration-[var(--transition-fast)] ${
-          active
-            ? 'bg-teal border-teal text-white shadow-[var(--shadow-glow-teal)]'
-            : 'bg-obsidian border-border text-text-muted'
-        }`}
+        className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border transition-all duration-[var(--transition-fast)] ${active
+          ? 'bg-teal border-teal text-white shadow-[var(--shadow-glow-teal)]'
+          : 'bg-obsidian border-border text-text-muted'
+          }`}
       >
         {num}
       </div>
@@ -728,11 +716,10 @@ function UrgencySelector({ title, desc, selected, onClick }: UrgencySelectorProp
     <button
       type="button"
       onClick={onClick}
-      className={`p-4 text-left border rounded-xl transition-all cursor-pointer h-full flex flex-col justify-between ${
-        selected
-          ? 'bg-teal/15 border-teal text-teal-glow shadow-[var(--shadow-glow-teal)]'
-          : 'bg-obsidian border-border text-text-secondary hover:bg-surface-hover/30 hover:border-border-light'
-      }`}
+      className={`p-4 text-left border rounded-xl transition-all cursor-pointer h-full flex flex-col justify-between ${selected
+        ? 'bg-teal/15 border-teal text-teal-glow shadow-[var(--shadow-glow-teal)]'
+        : 'bg-obsidian border-border text-text-secondary hover:bg-surface-hover/30 hover:border-border-light'
+        }`}
     >
       <div>
         <p className="font-semibold text-sm text-text-primary">{title}</p>

@@ -28,10 +28,7 @@ class TicketAttachmentSerializer(serializers.ModelSerializer):
         fields = ['id', 'file_name', 'file_size', 'url', 'created_at']
 
     def get_url(self, obj):
-        request = self.context.get('request')
         if obj.file:
-            if request:
-                return request.build_absolute_uri(obj.file.url)
             return obj.file.url
         return None
 

@@ -1,8 +1,10 @@
 /**
- * StructuredDescription — parses formatted markdown sections into distinct cards.
+ * StructuredDescription — parses formatted markdown sections into distinct cards,
+ * and renders Markdown formatting (bold, lists, code, links) within section bodies.
  */
 
 import { useMemo } from 'react';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface StructuredDescriptionProps {
   description?: string;
@@ -11,8 +13,6 @@ interface StructuredDescriptionProps {
 interface Section {
   header: string;
   body: string;
-  icon?: string;
-  colorClass?: string;
 }
 
 export default function StructuredDescription({ description = '' }: StructuredDescriptionProps) {
@@ -25,14 +25,14 @@ export default function StructuredDescription({ description = '' }: StructuredDe
     let currentBodyLines: string[] = [];
 
     for (const line of lines) {
-      if (line.startsWith('### ') || line.startsWith('## ')) {
+      if (/^#{1,6}\s+/.test(line)) {
         if (currentHeader || currentBodyLines.length > 0) {
           parsed.push({
-            header: currentHeader || 'Overview',
+            header: currentHeader,
             body: currentBodyLines.join('\n').trim(),
           });
         }
-        currentHeader = line.replace(/^#{2,3}\s+/, '').trim();
+        currentHeader = line.replace(/^#{1,6}\s+/, '').trim();
         currentBodyLines = [];
       } else {
         currentBodyLines.push(line);
@@ -41,7 +41,7 @@ export default function StructuredDescription({ description = '' }: StructuredDe
 
     if (currentHeader || currentBodyLines.length > 0) {
       parsed.push({
-        header: currentHeader || 'Description',
+        header: currentHeader,
         body: currentBodyLines.join('\n').trim(),
       });
     }
@@ -57,11 +57,11 @@ export default function StructuredDescription({ description = '' }: StructuredDe
     );
   }
 
-  // If there's only 1 unstructured block
+  // If there's only 1 unstructured block without headers
   if (sections.length === 1 && !sections[0].header) {
     return (
-      <div className="bg-obsidian/30 p-5 rounded-xl border border-border/50 text-text-primary text-sm whitespace-pre-wrap leading-relaxed">
-        {sections[0].body}
+      <div className="bg-obsidian/30 p-5 rounded-xl border border-border/50 text-text-primary text-sm leading-relaxed">
+        <MarkdownRenderer content={sections[0].body} />
       </div>
     );
   }
@@ -76,16 +76,22 @@ export default function StructuredDescription({ description = '' }: StructuredDe
             key={idx}
             className={`rounded-xl border ${style.border} ${style.bg} overflow-hidden transition-all duration-[var(--transition-fast)]`}
           >
-            <div className={`px-4 py-2.5 ${style.headerBg} border-b ${style.border} flex items-center justify-between`}>
-              <div className="flex items-center gap-2">
-                <span className="text-base">{style.icon}</span>
-                <h4 className={`text-xs font-bold uppercase tracking-wider ${style.textColor}`}>
-                  {cleanHeaderText(sec.header)}
-                </h4>
+            {sec.header && (
+              <div className={`px-4 py-2.5 ${style.headerBg} border-b ${style.border} flex items-center justify-between`}>
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{style.icon}</span>
+                  <h4 className={`text-xs font-bold uppercase tracking-wider ${style.textColor}`}>
+                    {cleanHeaderText(sec.header)}
+                  </h4>
+                </div>
               </div>
-            </div>
-            <div className="p-4 text-text-primary text-sm whitespace-pre-wrap leading-relaxed font-sans select-text">
-              {sec.body || <span className="text-text-muted italic">N/A</span>}
+            )}
+            <div className="p-4 text-text-primary text-sm leading-relaxed font-sans select-text">
+              {sec.body ? (
+                <MarkdownRenderer content={sec.body} />
+              ) : (
+                <span className="text-text-muted italic">N/A</span>
+              )}
             </div>
           </div>
         );
@@ -95,8 +101,10 @@ export default function StructuredDescription({ description = '' }: StructuredDe
 }
 
 function cleanHeaderText(raw: string): string {
-  // Removes leading emojis since we render them in the icon badge
-  return raw.replace(/^[💡⚠️🔧🚀🎯🛠️❓📌📝\s]+/, '').trim() || raw;
+  // Removes leading emojis and markdown formatting symbols (*, _, `, #) from header titles
+  let cleaned = raw.replace(/^[💡⚠️🔧🚀🎯🛠️❓📌📝\s]+/, '').trim();
+  cleaned = cleaned.replace(/[\*_`#]+/g, '').trim();
+  return cleaned || raw;
 }
 
 function getSectionStyle(header: string) {

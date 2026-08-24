@@ -9,6 +9,7 @@ import StatusBadge from '../components/StatusBadge';
 import UrgencyBadge from '../components/UrgencyBadge';
 import TicketTypeBadge from '../components/TicketTypeBadge';
 import StructuredDescription from '../components/StructuredDescription';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 import { formatDateTime, formatDuration } from '../utils/dateUtils';
 import type { Ticket, TicketStatus, Priority, UserProfile } from '../types';
 
@@ -250,11 +251,11 @@ export default function TicketDetailPage() {
                   {ticket.attachments.map((att) => (
                     <div
                       key={att.id}
-                      onClick={() => setPreviewImage(att.url)}
+                      onClick={() => setPreviewImage(formatImageUrl(att.url))}
                       className="group relative rounded-xl overflow-hidden border border-border bg-obsidian aspect-video cursor-pointer hover:border-teal transition-all shadow-sm"
                     >
                       <img
-                        src={att.url}
+                        src={formatImageUrl(att.url)}
                         alt={att.file_name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
@@ -271,8 +272,12 @@ export default function TicketDetailPage() {
             {(ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' || ticket.resolution_documentation) && (
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-status-resolved uppercase tracking-wider">{t('tickets:detail.resolution_docs_heading')}</h3>
-                <div className="bg-status-resolved/5 p-5 rounded-xl border border-status-resolved/20 text-text-primary text-sm whitespace-pre-wrap leading-relaxed">
-                  {ticket.resolution_documentation || <span className="text-text-muted italic">{t('tickets:detail.no_resolution_docs')}</span>}
+                <div className="bg-status-resolved/5 p-5 rounded-xl border border-status-resolved/20 text-text-primary text-sm leading-relaxed">
+                  {ticket.resolution_documentation ? (
+                    <MarkdownRenderer content={ticket.resolution_documentation} />
+                  ) : (
+                    <span className="text-text-muted italic">{t('tickets:detail.no_resolution_docs')}</span>
+                  )}
                 </div>
               </div>
             )}
@@ -742,5 +747,11 @@ export default function TicketDetailPage() {
 }
 
 // ── Helpers ──
+
+function formatImageUrl(url?: string): string {
+  if (!url) return '';
+  // Convert absolute localhost/127.0.0.1 URLs to relative paths so they go through Vite proxy
+  return url.replace(/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?/, '');
+}
 
 
