@@ -13,8 +13,13 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
+from users.sso_views import sso_exchange_view
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    # SSO Integration from home-web EME Portal
+    path('sso/exchange/', sso_exchange_view, name='sso_exchange'),
 
     # JWT Authentication
     path('api/v1/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),

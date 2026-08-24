@@ -223,7 +223,13 @@ export default function TicketDetailPage() {
                 <h1 className="text-2xl font-bold text-text-primary">{ticket.title}</h1>
                 <p className="text-xs text-text-secondary mt-1.5">
                   {t('tickets:detail.submitted_by')}{' '}
-                  <span className="font-semibold text-text-primary">{ticket.created_by.first_name || ticket.created_by.username}</span> &middot; {formatDateTime(ticket.created_at)}
+                  <Link
+                    to={`/users/${ticket.created_by.id}`}
+                    className="font-semibold text-text-primary hover:text-duck-yellow hover:underline transition-colors"
+                    title="Ver perfil del usuario"
+                  >
+                    {ticket.created_by.first_name || ticket.created_by.username}
+                  </Link> &middot; {formatDateTime(ticket.created_at)}
                 </p>
               </div>
               <div className="flex gap-2 items-center">
@@ -605,7 +611,13 @@ export default function TicketDetailPage() {
                   ) : (
                     <span className="font-medium text-text-primary mt-0.5 block">
                       {ticket.assigned_to ? (
-                        ticket.assigned_to.first_name || ticket.assigned_to.username
+                        <Link
+                          to={`/users/${ticket.assigned_to.id}`}
+                          className="hover:text-duck-yellow hover:underline transition-colors"
+                          title="Ver perfil del usuario"
+                        >
+                          {ticket.assigned_to.first_name || ticket.assigned_to.username}
+                        </Link>
                       ) : (
                         <span className="text-text-muted italic">{t('tickets:table.unassigned')}</span>
                       )}

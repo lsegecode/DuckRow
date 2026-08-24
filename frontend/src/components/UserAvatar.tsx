@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { UserMinimal } from '../types';
 
 interface UserAvatarProps {
@@ -6,6 +7,7 @@ interface UserAvatarProps {
   showName?: boolean;
   className?: string;
   subtitle?: string;
+  clickable?: boolean;
 }
 
 const colorPalette = [
@@ -55,6 +57,7 @@ export default function UserAvatar({
   showName = false,
   className = '',
   subtitle,
+  clickable = true,
 }: UserAvatarProps) {
   if (!user) return null;
 
@@ -69,19 +72,33 @@ export default function UserAvatar({
     lg: 'w-11 h-11 text-sm',
   }[size];
 
-  return (
-    <div className={`inline-flex items-center gap-2 ${className}`} title={displayName}>
+  const avatarContent = (
+    <div className={`inline-flex items-center gap-2 ${className}`} title={`Ver perfil de ${displayName}`}>
       <div
-        className={`${sizeClasses} rounded-full bg-gradient-to-br ${colorClass} border flex items-center justify-center font-bold shadow-sm select-none shrink-0`}
+        className={`${sizeClasses} rounded-full bg-gradient-to-br ${colorClass} border flex items-center justify-center font-bold shadow-sm select-none shrink-0 transition-transform group-hover:scale-105`}
       >
         <span>{initials}</span>
       </div>
       {showName && (
         <div className="min-w-0">
-          <p className="text-xs font-medium text-text-primary truncate">{displayName}</p>
+          <p className="text-xs font-medium text-text-primary group-hover:text-duck-yellow transition-colors truncate">{displayName}</p>
           {subtitle && <p className="text-[10px] text-text-muted truncate">{subtitle}</p>}
         </div>
       )}
     </div>
   );
+
+  if (clickable && user.id) {
+    return (
+      <Link
+        to={`/users/${user.id}`}
+        className="group inline-flex items-center hover:opacity-90 transition-opacity cursor-pointer"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {avatarContent}
+      </Link>
+    );
+  }
+
+  return avatarContent;
 }

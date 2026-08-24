@@ -2,7 +2,7 @@
  * LoginPage — dark-themed login with duck branding and language selection.
  */
 
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -20,6 +20,30 @@ export default function LoginPage() {
   const location = useLocation();
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const ssoError = params.get('error');
+    if (ssoError) {
+      switch (ssoError) {
+        case 'token_expired':
+          setError('El enlace SSO ha expirado (máximo 120s). Vuelve a intentar desde el Portal EME.');
+          break;
+        case 'token_invalid':
+          setError('El token SSO es inválido o la firma de autenticación no coincide.');
+          break;
+        case 'token_missing':
+          setError('No se recibió el token de autenticación SSO.');
+          break;
+        case 'invalid_user_data':
+          setError('Los datos de usuario enviados por SSO no son válidos.');
+          break;
+        default:
+          setError('Credenciales inválidas o error de autenticación SSO.');
+          break;
+      }
+    }
+  }, [location.search]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

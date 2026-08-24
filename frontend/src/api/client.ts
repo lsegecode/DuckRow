@@ -55,7 +55,11 @@ client.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Do not attempt token refresh or force window reload for login requests or when already on /login
+    const isAuthEndpoint = originalRequest?.url?.includes('/auth/token');
+    const isAlreadyOnLogin = typeof window !== 'undefined' && window.location.pathname === '/login';
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -71,10 +75,12 @@ client.interceptors.response.use(
       const refreshToken = localStorage.getItem('refresh_token');
 
       if (!refreshToken) {
-        // No refresh token — force logout
+        // No refresh token — force logout only if not already on /login
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
+        if (!isAlreadyOnLogin) {
+          window.location.href = '/login';
+        }
         return Promise.reject(error);
       }
 
@@ -95,7 +101,9 @@ client.interceptors.response.use(
         processQueue(refreshError, null);
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
+        if (!isAlreadyOnLogin) {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

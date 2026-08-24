@@ -93,19 +93,23 @@ export default function Sidebar() {
       {/* User info */}
       <div className="p-4 border-t border-border">
         <div className="glass-card p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-full bg-teal/20 flex items-center justify-center text-teal-glow font-bold text-sm">
+          <NavLink
+            to={`/users/${user?.id || 'me'}`}
+            className="flex items-center gap-3 mb-3 p-1.5 -mx-1.5 rounded-xl hover:bg-surface-hover transition-colors group cursor-pointer"
+            title="Ver mi perfil completo"
+          >
+            <div className="w-9 h-9 rounded-full bg-teal/20 flex items-center justify-center text-teal-glow font-bold text-sm group-hover:scale-105 transition-transform">
               {user?.first_name?.[0] || user?.username?.[0] || '?'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-text-primary truncate">
+              <p className="text-sm font-medium text-text-primary group-hover:text-duck-yellow transition-colors truncate">
                 {user?.first_name} {user?.last_name}
               </p>
               <p className={`text-xs font-semibold ${roleColor}`}>
                 {t(roleKey)}
               </p>
             </div>
-          </div>
+          </NavLink>
           <button
             onClick={handleLogout}
             className="w-full px-3 py-2 text-xs font-medium text-text-secondary hover:text-urgency-high hover:bg-urgency-high/10 rounded-lg transition-all duration-[var(--transition-fast)] border border-transparent hover:border-urgency-high/20"

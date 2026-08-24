@@ -41,17 +41,21 @@ class UserProfileViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Read-only access to user profiles.
 
-    - SYSADMIN: can list all profiles.
-    - Others: can only retrieve their own profile.
+    - Authenticated users can list or retrieve user profiles.
     """
 
+    queryset = UserProfile.objects.all().select_related('user').prefetch_related('areas')
     serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        user = self.request.user
-        if hasattr(user, 'profile') and user.profile.role == 'SYSADMIN':
-            return UserProfile.objects.all().select_related('user').prefetch_related('areas')
-        return UserProfile.objects.filter(user=user).select_related('user').prefetch_related('areas')
+    @action(detail=False, methods=['get'], url_path=r'user/(?P<user_id>\d+)')
+    def get_by_user_id(self, request, user_id=None):
+        try:
+            profile = UserProfile.objects.select_related('user').prefetch_related('areas').get(user_id=user_id)
+            serializer = self.get_serializer(profile)
+            return Response(serializer.data)
+        except UserProfile.DoesNotExist:
+            return Response({'detail': 'Perfil de usuario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
 
 class ResolverListView(generics.ListAPIView):

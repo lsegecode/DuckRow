@@ -20,4 +20,14 @@ export const usersApi = {
     const { data } = await client.get<any>('/users/resolvers/');
     return Array.isArray(data) ? data : data?.results || [];
   },
+
+  getProfileByUserId: async (userId: string | number): Promise<UserProfile> => {
+    const { data } = await client.get<UserProfile>(`/users/profiles/user/${userId}/`);
+    return data;
+  },
+
+  getProfileById: async (profileId: string | number): Promise<UserProfile> => {
+    const { data } = await client.get<UserProfile>(`/users/profiles/${profileId}/`);
+    return data;
+  },
 };

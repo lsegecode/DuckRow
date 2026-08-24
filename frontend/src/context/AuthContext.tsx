@@ -33,6 +33,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUser = useCallback(async () => {
+    // Detect SSO tokens passed in URL hash (#access=...&refresh=...)
+    if (typeof window !== 'undefined' && window.location.hash.includes('access=')) {
+      const hash = window.location.hash.substring(1);
+      const params = new URLSearchParams(hash);
+      const access = params.get('access');
+      const refresh = params.get('refresh');
+      if (access && refresh) {
+        localStorage.setItem('access_token', access);
+        localStorage.setItem('refresh_token', refresh);
+        window.history.replaceState(null, '', window.location.pathname === '/login' ? '/dashboard' : window.location.pathname);
+      }
+    }
+
     const token = localStorage.getItem('access_token');
     if (!token) {
       setUser(null);
