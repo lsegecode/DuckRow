@@ -42,12 +42,6 @@ export default function TicketDetailPage() {
       setStatusVal(ticket.status);
       setPriorityVal(ticket.internal_priority || '');
       setAssignedToVal(ticket.assigned_to?.id || '');
-      setEstimatedResolutionVal(
-        ticket.estimated_resolution_time
-          ? new Date(ticket.estimated_resolution_time).toISOString().slice(0, 16)
-          : ''
-      );
-      setEstimatedWorkVal(ticket.estimated_work_hours || '');
       setResolvedAtVal(
         ticket.resolved_at
           ? new Date(ticket.resolved_at).toISOString().slice(0, 16)
@@ -111,8 +105,6 @@ export default function TicketDetailPage() {
     if (!resolvedAtVal || !ticket) return null;
     return formatDuration(ticket.created_at, new Date(resolvedAtVal).toISOString(), i18n.language);
   })();
-
-  const resolutionDuration = ticket ? formatDuration(ticket.created_at, ticket.resolved_at, i18n.language) : null;
 
   if (isLoading) {
     return (
@@ -300,11 +292,6 @@ export default function TicketDetailPage() {
                       setStatusVal(ticket.status);
                       setPriorityVal(ticket.internal_priority || '');
                       setAssignedToVal(ticket.assigned_to?.id || '');
-                      setEstimatedResolutionVal(
-                        ticket.estimated_resolution_time
-                          ? new Date(ticket.estimated_resolution_time).toISOString().slice(0, 16)
-                          : ''
-                      );
                       setResolvedAtVal(
                         ticket.resolved_at
                           ? new Date(ticket.resolved_at).toISOString().slice(0, 16)
@@ -628,94 +615,51 @@ export default function TicketDetailPage() {
 
               {/* Divider for Timestamps */}
               <div className="pt-2 border-t border-border/40 space-y-3">
-                {/* Creation Date */}
+                {/* 1. Fecha de Creación */}
                 <div>
-                  <span className="text-xs text-text-secondary flex items-center gap-1.5">
+                  <span className="text-xs text-text-secondary flex items-center gap-1.5 font-medium">
                     <span>📅</span>
-                    <span>{t('tickets:detail.created_date')}</span>
+                    <span>Fecha de Creación</span>
                   </span>
                   <span className="font-medium text-text-primary mt-0.5 block text-xs">
                     {formatDateTime(ticket.created_at)}
                   </span>
                 </div>
 
-                {/* Assigned / Start Date */}
+                {/* 2. Fecha de Inicio (En Progreso) */}
                 <div>
-                  <span className="text-xs text-text-secondary flex items-center gap-1.5">
+                  <span className="text-xs text-text-secondary flex items-center gap-1.5 font-medium">
                     <span>🚀</span>
-                    <span>{t('tickets:detail.assigned_date')}</span>
+                    <span>Fecha de Inicio (En Progreso)</span>
                   </span>
                   <span className="font-medium text-text-primary mt-0.5 block text-xs">
-                    {ticket.assigned_at ? (
-                      formatDateTime(ticket.assigned_at)
+                    {ticket.started_at ? (
+                      formatDateTime(ticket.started_at)
                     ) : (
-                      <span className="text-text-muted italic">{t('tickets:detail.not_assigned_yet')}</span>
+                      <span className="text-text-muted italic">Pendiente de iniciar</span>
                     )}
                   </span>
                 </div>
 
-                {/* Expected Delivery Date (Target) */}
+                {/* 3. Fecha de Entrega / Resolución */}
                 <div>
-                  <span className="text-xs text-text-secondary flex items-center gap-1.5">
-                    <span>📅</span>
-                    <span>{t('tickets:detail.estimated_delivery_label')}</span>
-                  </span>
-                  <span className="font-medium text-teal-glow mt-0.5 block text-xs">
-                    {ticket.estimated_resolution_time ? (
-                      formatDateTime(ticket.estimated_resolution_time)
-                    ) : (
-                      <span className="text-text-muted italic">{t('tickets:detail.not_set')}</span>
-                    )}
-                  </span>
-                </div>
-
-                {/* Estimated Active Work Effort */}
-                <div>
-                  <span className="text-xs text-text-secondary flex items-center gap-1.5">
-                    <span>⏱️</span>
-                    <span>{t('tickets:detail.estimated_work_label')}</span>
-                  </span>
-                  <span className="font-medium text-text-primary mt-0.5 block text-xs">
-                    {ticket.estimated_work_hours ? (
-                      ticket.estimated_work_hours
-                    ) : (
-                      <span className="text-text-muted italic">{t('tickets:detail.not_set')}</span>
-                    )}
-                  </span>
-                </div>
-
-                {/* Closed Date */}
-                <div>
-                  <span className="text-xs text-text-secondary flex items-center gap-1.5">
+                  <span className="text-xs text-text-secondary flex items-center gap-1.5 font-medium">
                     <span>🏁</span>
-                    <span>{t('tickets:detail.closed_date')}</span>
+                    <span>Fecha de Entrega</span>
                   </span>
                   <span className="font-medium text-text-primary mt-0.5 block text-xs">
                     {ticket.resolved_at ? (
                       formatDateTime(ticket.resolved_at)
                     ) : (
-                      <span className="text-text-muted italic">{t('tickets:detail.not_closed_yet')}</span>
+                      <span className="text-text-muted italic">Pendiente de entrega</span>
                     )}
                   </span>
                 </div>
 
-                {/* Actual Time of Resolution */}
-                {resolutionDuration && (
-                  <div className="p-2.5 rounded-lg bg-status-resolved/10 border border-status-resolved/30">
-                    <span className="text-xs text-status-resolved font-semibold flex items-center gap-1.5">
-                      <span>✅</span>
-                      <span>{t('tickets:detail.actual_resolution_time')}</span>
-                    </span>
-                    <span className="text-sm font-bold text-status-resolved mt-1 block">
-                      {resolutionDuration}
-                    </span>
-                  </div>
-                )}
-
-                {/* Last Updated */}
-                <div className="pt-1">
+                {/* Última actualización */}
+                <div className="pt-1 border-t border-border/20">
                   <span className="text-[11px] text-text-muted block">
-                    {t('tickets:detail.last_updated')}: {formatDateTime(ticket.updated_at)}
+                    Última actualización: {formatDateTime(ticket.updated_at)}
                   </span>
                 </div>
               </div>

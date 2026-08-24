@@ -82,11 +82,10 @@ class TicketDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'ticket_type', 'description', 'status', 'urgency',
             'internal_priority', 'source_area', 'created_by',
-            'assigned_to', 'attachments', 'assigned_at', 'resolved_at',
-            'estimated_resolution_time', 'estimated_work_hours', 'resolution_documentation',
-            'created_at', 'updated_at',
+            'assigned_to', 'attachments', 'started_at', 'resolved_at',
+            'resolution_documentation', 'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'created_by', 'created_at', 'updated_at', 'assigned_at', 'resolved_at']
+        read_only_fields = ['id', 'created_by', 'created_at', 'updated_at', 'started_at', 'resolved_at']
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -194,8 +193,7 @@ class TicketUpdateSerializer(serializers.ModelSerializer):
     Role-aware update serializer.
 
     - SYSADMIN: can update all fields including internal_priority and assigned_to.
-    - RESOLVER: can update status, resolution_documentation, estimated_resolution_time,
-                and resolved_at (to backdate a resolution).
+    - RESOLVER: can update status, internal_priority, resolution_documentation, and resolved_at.
     - CLIENT: cannot update tickets (enforced at permission level).
     """
 
@@ -210,13 +208,17 @@ class TicketUpdateSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
 
+    started_at = serializers.DateTimeField(
+        required=False,
+        allow_null=True,
+    )
+
     class Meta:
         model = Ticket
         fields = [
             'id', 'title', 'ticket_type', 'description', 'status', 'urgency',
-            'internal_priority', 'assigned_to_id',
-            'estimated_resolution_time', 'estimated_work_hours', 'resolution_documentation',
-            'resolved_at', 'created_at', 'updated_at',
+            'internal_priority', 'assigned_to_id', 'resolution_documentation',
+            'started_at', 'resolved_at', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -225,11 +227,9 @@ class TicketUpdateSerializer(serializers.ModelSerializer):
         role = request.user.profile.role
 
         if role == 'RESOLVER':
-            # Resolvers can update status, internal_priority, resolution_documentation,
-            # estimated_resolution_time, estimated_work_hours, and resolved_at.
             allowed_fields = {
                 'status', 'internal_priority', 'resolution_documentation',
-                'estimated_resolution_time', 'estimated_work_hours', 'resolved_at',
+                'started_at', 'resolved_at',
             }
             incoming_fields = set(attrs.keys())
             forbidden = incoming_fields - allowed_fields
@@ -256,37 +256,33 @@ class TicketUpdateSerializer(serializers.ModelSerializer):
                 assigned_user = User.objects.get(id=assigned_to_id)
                 if instance.assigned_to != assigned_user:
                     instance.assigned_to = assigned_user
-                    if not instance.assigned_at:
-                        instance.assigned_at = timezone.now()
             except User.DoesNotExist:
                 raise serializers.ValidationError(
                     {'assigned_to_id': _('User not found.')}
                 )
         elif 'assigned_to_id' in self.initial_data and self.initial_data['assigned_to_id'] is None:
             instance.assigned_to = None
-            instance.assigned_at = None
         else:
             # Auto-assign unassigned tickets to a resolver when they perform an update
             request = self.context.get('request')
             if request and hasattr(request.user, 'profile') and request.user.profile.role == 'RESOLVER':
                 if instance.assigned_to is None:
                     instance.assigned_to = request.user
-                    if not instance.assigned_at:
-                        instance.assigned_at = timezone.now()
 
-        # Determine the new resolved_at value.
-        # Priority: explicit payload value > auto-set from status change > preserve existing.
-        explicit_resolved_at = validated_data.pop('resolved_at', ...)
+        # Status transition handling
         new_status = validated_data.get('status', instance.status)
 
+        # Set started_at when status changes to IN_PROGRESS
+        if new_status == 'IN_PROGRESS' and not instance.started_at:
+            instance.started_at = timezone.now()
+
+        # Handle resolved_at
+        explicit_resolved_at = validated_data.pop('resolved_at', ...)
         if explicit_resolved_at is not ...:
-            # Caller explicitly provided a value (including None to clear it)
             instance.resolved_at = explicit_resolved_at
         elif new_status in ('RESOLVED', 'CLOSED') and instance.status not in ('RESOLVED', 'CLOSED'):
-            # Status flip to resolved/closed without an explicit date → use now()
             instance.resolved_at = timezone.now()
-        elif new_status in ('OPEN', 'IN_PROGRESS') and instance.status in ('RESOLVED', 'CLOSED'):
-            # Status reverted to open/in-progress → clear resolved_at
+        elif new_status == 'OPEN' and instance.status in ('RESOLVED', 'CLOSED'):
             instance.resolved_at = None
 
         for attr, value in validated_data.items():

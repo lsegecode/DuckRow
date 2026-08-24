@@ -121,7 +121,7 @@ class Ticket(models.Model):
         blank=True,
     )
 
-    assigned_at = models.DateTimeField(
+    started_at = models.DateTimeField(
         null=True,
         blank=True,
     )
