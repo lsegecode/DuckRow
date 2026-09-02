@@ -1,5 +1,5 @@
 """
-Single Sign-On (SSO) views for DuckRow integration with home-web EME Portal.
+Single Sign-On (SSO) views for DuckRow integration with Home Portal.
 """
 
 from django.shortcuts import redirect
@@ -71,14 +71,8 @@ def sso_exchange_view(request):
         print(f"[SSO ERROR] Token expirado (>120s): {e}")
         return redirect('/login?error=token_expired')
     except BadSignature as e:
-        # Fallback check: attempt unsigning with explicit home-web shared secret key
-        fallback_key = 'django-insecure-*-*vs4z#2b-qzwp=j!qwucji$9s70!#+rjqm@o97ea=mwr6z81'
-        try:
-            fallback_signer = TimestampSigner(key=fallback_key, salt=salt)
-            payload = fallback_signer.unsign_object(token, max_age=120)
-        except Exception as fallback_e:
-            print(f"[SSO ERROR] Firma del token inválida (verificar SECRET_KEY o salt): {fallback_e}")
-            return redirect('/login?error=token_invalid')
+        print(f"[SSO ERROR] Firma del token inválida (verificar HOME_WEB_SSO_SECRET_KEY o salt): {e}")
+        return redirect('/login?error=token_invalid')
     except Exception as e:
         print(f"[SSO ERROR] Error verificando SSO token: {e}")
         return redirect('/login?error=token_error')
@@ -138,17 +132,33 @@ def sso_exchange_view(request):
 
         # Collect target area names specified in home-web payload
         target_area_names = set()
-        if isinstance(area_single, str) and area_single.strip():
-            target_area_names.add(area_single.strip())
-        if isinstance(areas_list, list):
-            for a_item in areas_list:
-                if isinstance(a_item, str) and a_item.strip():
-                    target_area_names.add(a_item.strip())
+        print(f"[SSO INFO] Authenticating user '{user.username}' with SSO payload: {payload}")
 
-        # Fallback to role name if no area fields were specified
+        # Check single-string area keys
+        for key in ['area', 'proyecto', 'area_proyecto', 'departamento']:
+            val = payload.get(key)
+            if isinstance(val, str) and val.strip() and val.strip().upper() not in ('CLIENT', 'CLIENTE', 'USER', 'USUARIO'):
+                target_area_names.add(val.strip())
+            elif isinstance(val, dict) and 'name' in val:
+                target_area_names.add(str(val['name']).strip())
+
+        # Check list area keys
+        for key in ['areas', 'proyectos', 'areas_proyecto', 'departamentos']:
+            val_list = payload.get(key)
+            if isinstance(val_list, list):
+                for a_item in val_list:
+                    if isinstance(a_item, str) and a_item.strip() and a_item.strip().upper() not in ('CLIENT', 'CLIENTE', 'USER', 'USUARIO'):
+                        target_area_names.add(a_item.strip())
+                    elif isinstance(a_item, dict) and 'name' in a_item:
+                        target_area_names.add(str(a_item['name']).strip())
+
+        # Fallback to role name if specific (e.g. Area/Department name)
         if not target_area_names:
-            fallback_name = str(payload.get('rol', 'General')).strip()
-            target_area_names.add(fallback_name)
+            raw_rol = str(payload.get('rol') or payload.get('role') or '').strip()
+            if raw_rol and raw_rol.upper() not in ('CLIENT', 'CLIENTE', 'USER', 'USUARIO', 'NONE'):
+                target_area_names.add(raw_rol.capitalize())
+            else:
+                target_area_names.add('General')
 
         # Get or create Area objects and associate them with the user profile
         area_objs = []
@@ -156,7 +166,8 @@ def sso_exchange_view(request):
             area_obj, _ = Area.objects.get_or_create(name=name)
             area_objs.append(area_obj)
 
-        profile.areas.add(*area_objs)
+        if area_objs:
+            profile.areas.set(area_objs)
 
     # 3. Generate SimpleJWT tokens
     refresh = RefreshToken.for_user(user)
@@ -164,16 +175,24 @@ def sso_exchange_view(request):
     refresh_token = str(refresh)
 
     # 4. Redirect to frontend SSO callback landing page with tokens in URL hash
-    host = request.headers.get('Host', '')
+    configured_frontend = getattr(settings, 'FRONTEND_URL', '').strip().rstrip('/')
+    host_header = request.get_host()
+    host_name = host_header.split(':')[0]
     scheme = 'https' if request.is_secure() else 'http'
-    
-    # If request hit Django backend port (8900 or 8000) directly, route redirect to frontend Vite port (5173)
-    if ':8900' in host:
-        frontend_origin = f"{scheme}://{host.replace(':8900', ':5173')}"
-    elif ':8000' in host:
-        frontend_origin = f"{scheme}://{host.replace(':8000', ':5173')}"
+
+    # 1. If request comes from an external/LAN IP or DNS (not localhost), preserve that host on port 5173
+    if host_name and host_name not in ('127.0.0.1', 'localhost'):
+        frontend_origin = f"{scheme}://{host_name}:5173"
+    # 2. If FRONTEND_URL is explicitly configured in .env, use it
+    elif configured_frontend:
+        frontend_origin = configured_frontend
+    # 3. Fallback to host replacement on port 5173
+    elif ':8900' in host_header:
+        frontend_origin = f"{scheme}://{host_header.replace(':8900', ':5173')}"
+    elif ':8000' in host_header:
+        frontend_origin = f"{scheme}://{host_header.replace(':8000', ':5173')}"
     else:
-        frontend_origin = ""
+        frontend_origin = f"{scheme}://{host_name}:5173" if host_name else ""
 
     frontend_sso_url = f"{frontend_origin}/sso-callback#access={access_token}&refresh={refresh_token}"
     return redirect(frontend_sso_url)

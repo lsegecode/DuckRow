@@ -89,15 +89,35 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # ---------------------------------------------------------------------------
-# Database — SQLite for Day-1, swap to PostgreSQL later
+# Database — Dynamic: SQLite by default, Microsoft SQL Server in prod
 # ---------------------------------------------------------------------------
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+DB_ENGINE = os.getenv('DB_ENGINE', 'sqlite').lower()
+
+if DB_ENGINE in ('mssql', 'sqlserver', 'sql_server'):
+    db_schema = os.getenv('DB_SCHEMA', 'tic')
+    DATABASES = {
+        'default': {
+            'ENGINE': 'mssql',
+            'NAME': os.getenv('DB_NAME', 'DuckRowDB'),
+            'USER': os.getenv('DB_USER', ''),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '1433'),
+            'OPTIONS': {
+                'driver': os.getenv('DB_DRIVER', 'ODBC Driver 17 for SQL Server'),
+                'schema': db_schema,
+                'extra_params': os.getenv('DB_EXTRA_PARAMS', 'TrustServerCertificate=yes;'),
+            }
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -149,7 +169,8 @@ LOCALE_PATHS = [
 STATIC_URL = 'static/'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+raw_media_root = os.getenv('MEDIA_ROOT', '')
+MEDIA_ROOT = Path(raw_media_root) if raw_media_root else (BASE_DIR / 'media')
 
 
 # ---------------------------------------------------------------------------
@@ -202,11 +223,22 @@ CORS_ALLOW_CREDENTIALS = True
 
 
 # ---------------------------------------------------------------------------
-# Single Sign-On (SSO) with Home-Web EME Portal
+# Single Sign-On (SSO) with Home Portal
 # ---------------------------------------------------------------------------
 
 HOME_WEB_SSO_SALT = os.getenv('HOME_WEB_SSO_SALT', 'duckrow-sso-auth')
 # If HOME_WEB_SSO_SECRET_KEY is not defined, falls back to SECRET_KEY
 raw_sso_secret = os.getenv('HOME_WEB_SSO_SECRET_KEY', None)
 HOME_WEB_SSO_SECRET_KEY = raw_sso_secret.strip("'\"").strip() if raw_sso_secret else None
+
+
+# ---------------------------------------------------------------------------
+# Microsoft Teams Workflows Webhook Notifications & Links
+# ---------------------------------------------------------------------------
+
+TEAMS_WEBHOOK_URL = os.getenv('TEAMS_WEBHOOK_URL', '').strip("'\"").strip()
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173').strip("'\"").rstrip('/')
+
+
+
 

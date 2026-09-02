@@ -24,6 +24,14 @@ export default function TicketListPage() {
   const [search, setSearch] = useState<string>('');
   const [ordering, setOrdering] = useState<string>('created_at'); // default oldest first (FIFO)
   const [page, setPage] = useState<number>(1);
+  const [historyMode, setHistoryMode] = useState<boolean>(false);
+
+  // Compute ISO string for "7 days ago" (recalculated per render is fine for a date filter)
+  const sevenDaysAgo = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    return d.toISOString();
+  })();
 
   useEffect(() => {
     const statusParam = searchParams.get('status');
@@ -38,9 +46,14 @@ export default function TicketListPage() {
     queryFn: usersApi.getAreas,
   });
 
-  // Fetch tickets based on filters
+  // Fetch tickets based on filters.
+  // Board mode: always loads the last 7 days with a large page_size to avoid pagination.
+  // List mode: respects historyMode toggle — when false, also limits to the last 7 days.
   const { data: ticketsData, isLoading, isError } = useQuery({
-    queryKey: ['tickets', { ticket_type: typeFilter, status: statusFilter, urgency: urgencyFilter, area: areaFilter, search, ordering, page }],
+    queryKey: [
+      'tickets',
+      { ticket_type: typeFilter, status: statusFilter, urgency: urgencyFilter, area: areaFilter, search, ordering, page, viewMode, historyMode },
+    ],
     queryFn: () =>
       ticketsApi.list({
         ticket_type: typeFilter || undefined,
@@ -49,7 +62,11 @@ export default function TicketListPage() {
         source_area: areaFilter || undefined,
         search: search || undefined,
         ordering,
-        page,
+        page: viewMode === 'board' ? 1 : page,
+        // Board: fetch up to 200 tickets at once to avoid paging issues on the kanban
+        page_size: viewMode === 'board' ? 200 : undefined,
+        // Apply week filter in board mode always; in list mode only when not in history mode
+        created_after: (viewMode === 'board' || !historyMode) ? sevenDaysAgo : undefined,
       }),
   });
 
@@ -60,6 +77,7 @@ export default function TicketListPage() {
     setAreaFilter('');
     setSearch('');
     setPage(1);
+    setHistoryMode(false);
   };
 
   const showCreateButton = true;
@@ -215,22 +233,42 @@ export default function TicketListPage() {
 
         {/* Ordering and Clear Filters */}
         <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-border/50">
-          <div className="flex items-center gap-2 text-sm text-text-secondary">
-            <span>{t('tickets:sort_by')}:</span>
-            <select
-              value={ordering}
-              onChange={(e) => setOrdering(e.target.value)}
-              className="bg-transparent border-none text-teal-glow font-medium outline-none cursor-pointer focus:ring-0 text-sm"
-            >
-              <option value="created_at">{t('tickets:sort_oldest')} (FIFO)</option>
-              <option value="-created_at">{t('tickets:sort_newest')}</option>
-              <option value="urgency">{t('tickets:sort_urgency_asc')}</option>
-              <option value="-urgency">{t('tickets:sort_urgency_desc')}</option>
-              <option value="status">{t('tickets:sort_status')}</option>
-            </select>
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2 text-sm text-text-secondary">
+              <span>{t('tickets:sort_by')}:</span>
+              <select
+                value={ordering}
+                onChange={(e) => setOrdering(e.target.value)}
+                className="bg-transparent border-none text-teal-glow font-medium outline-none cursor-pointer focus:ring-0 text-sm"
+              >
+                <option value="created_at">{t('tickets:sort_oldest')} (FIFO)</option>
+                <option value="-created_at">{t('tickets:sort_newest')}</option>
+                <option value="urgency">{t('tickets:sort_urgency_asc')}</option>
+                <option value="-urgency">{t('tickets:sort_urgency_desc')}</option>
+                <option value="status">{t('tickets:sort_status')}</option>
+              </select>
+            </div>
+
+            {/* History toggle — only in list view */}
+            {viewMode === 'list' && (
+              <button
+                onClick={() => { setHistoryMode((h) => !h); setPage(1); }}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                  historyMode
+                    ? 'bg-teal/15 border-teal/50 text-teal-glow'
+                    : 'bg-obsidian border-border text-text-secondary hover:border-teal/40 hover:text-text-primary'
+                }`}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                {historyMode ? t('tickets:history_mode_on') : t('tickets:history_mode_off')}
+              </button>
+            )}
           </div>
 
-          {(typeFilter || statusFilter || urgencyFilter || areaFilter || search) && (
+          {(typeFilter || statusFilter || urgencyFilter || areaFilter || search || historyMode) && (
             <button
               onClick={handleResetFilters}
               className="text-sm text-urgency-high hover:underline transition-all cursor-pointer"
@@ -240,6 +278,7 @@ export default function TicketListPage() {
           )}
         </div>
       </div>
+
 
       {/* Main View Area: Kanban Board vs Table List */}
       {viewMode === 'board' ? (

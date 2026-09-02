@@ -73,3 +73,15 @@ export function formatDuration(startDateStr?: string | null, endDateStr?: string
 
   return timeParts.length > 0 ? `${dayUnit}, ${timeParts.join(' ')}` : dayUnit;
 }
+
+/**
+ * Converts an ISO date string or Date object to local YYYY-MM-DDTHH:mm string
+ * for use as value in <input type="datetime-local">.
+ */
+export function toLocalInputDateTime(dateStrOrObj?: string | Date | null): string {
+  if (!dateStrOrObj) return '';
+  const d = typeof dateStrOrObj === 'string' ? new Date(dateStrOrObj) : dateStrOrObj;
+  if (isNaN(d.getTime())) return '';
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}

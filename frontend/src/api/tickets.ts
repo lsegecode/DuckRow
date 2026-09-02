@@ -24,6 +24,8 @@ export interface TicketFilters {
   page_size?: number;
   date_from?: string;
   date_to?: string;
+  created_after?: string;
+  created_before?: string;
 }
 
 export const ticketsApi = {

@@ -18,7 +18,7 @@ from users.sso_views import sso_exchange_view
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    # SSO Integration from home-web EME Portal
+    # SSO Integration from Home Portal
     path('sso/exchange/', sso_exchange_view, name='sso_exchange'),
 
     # JWT Authentication

@@ -13,9 +13,18 @@ import type { Ticket, TicketStatus, Priority } from '../types';
 interface TicketBoardCardProps {
   ticket: Ticket;
   columnType: 'QUEUE' | 'IN_PROGRESS' | 'DONE';
+  isDragging?: boolean;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
 }
 
-export default function TicketBoardCard({ ticket, columnType }: TicketBoardCardProps) {
+export default function TicketBoardCard({
+  ticket,
+  columnType,
+  isDragging = false,
+  onDragStart,
+  onDragEnd,
+}: TicketBoardCardProps) {
   const { role } = useAuth();
   const { t } = useTranslation(['tickets', 'common']);
   const queryClient = useQueryClient();
@@ -93,9 +102,24 @@ export default function TicketBoardCard({ ticket, columnType }: TicketBoardCardP
   };
 
 
-
   return (
-    <div className="glass-card p-4 rounded-xl border border-border hover:border-teal/50 transition-all duration-[var(--transition-fast)] shadow-md hover:shadow-[var(--shadow-glow-teal)] flex flex-col justify-between group space-y-3 bg-obsidian-light/80 backdrop-blur-md">
+    <div
+      draggable={isStaff}
+      onDragStart={(e) => {
+        if (!isStaff) return;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', ticket.id);
+        onDragStart?.();
+      }}
+      onDragEnd={onDragEnd}
+      className={[
+        'glass-card p-4 rounded-xl border border-border hover:border-teal/50',
+        'transition-all duration-[var(--transition-fast)] shadow-md hover:shadow-[var(--shadow-glow-teal)]',
+        'flex flex-col justify-between group space-y-3 bg-obsidian-light/80 backdrop-blur-md',
+        isStaff ? 'cursor-grab active:cursor-grabbing select-none' : '',
+        isDragging ? 'opacity-40 scale-95 rotate-1 shadow-2xl border-teal/30' : '',
+      ].join(' ')}
+    >
       {/* Top Header: Type, ID, Urgency & Internal Priority */}
       <div>
         <div className="flex items-center justify-between gap-2 mb-2">

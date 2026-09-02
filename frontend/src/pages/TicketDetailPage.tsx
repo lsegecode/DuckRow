@@ -10,7 +10,7 @@ import UrgencyBadge from '../components/UrgencyBadge';
 import TicketTypeBadge from '../components/TicketTypeBadge';
 import StructuredDescription from '../components/StructuredDescription';
 import MarkdownRenderer from '../components/MarkdownRenderer';
-import { formatDateTime, formatDuration } from '../utils/dateUtils';
+import { formatDateTime, formatDuration, toLocalInputDateTime } from '../utils/dateUtils';
 import type { Ticket, TicketStatus, Priority, UserProfile } from '../types';
 
 export default function TicketDetailPage() {
@@ -42,11 +42,9 @@ export default function TicketDetailPage() {
       setStatusVal(ticket.status);
       setPriorityVal(ticket.internal_priority || '');
       setAssignedToVal(ticket.assigned_to?.id || '');
-      setResolvedAtVal(
-        ticket.resolved_at
-          ? new Date(ticket.resolved_at).toISOString().slice(0, 16)
-          : ''
-      );
+      setEstimatedResolutionVal(toLocalInputDateTime(ticket.estimated_resolution_time));
+      setEstimatedWorkVal(ticket.estimated_work_hours || '');
+      setResolvedAtVal(toLocalInputDateTime(ticket.resolved_at));
       setResDocs(ticket.resolution_documentation || '');
     }
   }, [ticket]);
@@ -93,10 +91,8 @@ export default function TicketDetailPage() {
     setStatusVal(val);
     if ((val === 'RESOLVED' || val === 'CLOSED') && ticket) {
       // Only pre-fill if the ticket wasn't already resolved (avoid overwriting existing date)
-      const existing = ticket.resolved_at
-        ? new Date(ticket.resolved_at).toISOString().slice(0, 16)
-        : '';
-      setResolvedAtVal(existing || new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+      const existing = toLocalInputDateTime(ticket.resolved_at);
+      setResolvedAtVal(existing || toLocalInputDateTime(new Date()));
     }
   };
 
@@ -292,11 +288,9 @@ export default function TicketDetailPage() {
                       setStatusVal(ticket.status);
                       setPriorityVal(ticket.internal_priority || '');
                       setAssignedToVal(ticket.assigned_to?.id || '');
-                      setResolvedAtVal(
-                        ticket.resolved_at
-                          ? new Date(ticket.resolved_at).toISOString().slice(0, 16)
-                          : ''
-                      );
+                      setEstimatedResolutionVal(toLocalInputDateTime(ticket.estimated_resolution_time));
+                      setEstimatedWorkVal(ticket.estimated_work_hours || '');
+                      setResolvedAtVal(toLocalInputDateTime(ticket.resolved_at));
                       setResDocs(ticket.resolution_documentation || '');
                       setIsEditing(true);
                     }}
@@ -318,9 +312,10 @@ export default function TicketDetailPage() {
                         </label>
                         <select
                           value={priorityVal}
-                          onChange={(e) => setPriorityVal(e.target.value as Priority)}
+                          onChange={(e) => setPriorityVal((e.target.value as Priority) || '')}
                           className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none cursor-pointer"
                         >
+                          <option value="">{t('tickets:table.unassigned')}</option>
                           <option value="LOW">{t('tickets:priority.LOW')}</option>
                           <option value="MEDIUM">{t('tickets:priority.MEDIUM')}</option>
                           <option value="HIGH">{t('tickets:priority.HIGH')}</option>
@@ -329,20 +324,56 @@ export default function TicketDetailPage() {
                       </div>
                     )}
 
-                    {/* Status selector — SYSADMIN & RESOLVER, using handleStatusChange to pre-fill resolvedAtVal */}
+                    {/* Status selector — SYSADMIN & RESOLVER, restricted to valid workflow steps */}
                     <div>
-                      <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                        {t('tickets:table.status')}
-                      </label>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                          {t('tickets:table.status')}
+                        </label>
+                        {statusVal === 'OPEN' && !assignedToVal && !ticket.assigned_to && (
+                          <span className="text-[11px] text-urgency-high font-medium">
+                            ⚠️ Requiere asignar responsable para iniciar
+                          </span>
+                        )}
+                      </div>
                       <select
                         value={statusVal}
-                        onChange={(e) => handleStatusChange(e.target.value as TicketStatus)}
+                        onChange={(e) => handleStatusChange((e.target.value as TicketStatus) || '')}
                         className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none cursor-pointer"
                       >
-                        <option value="OPEN">{t('tickets:status.OPEN')}</option>
-                        <option value="IN_PROGRESS">{t('tickets:status.IN_PROGRESS')}</option>
-                        <option value="RESOLVED">{t('tickets:status.RESOLVED')}</option>
-                        <option value="CLOSED">{t('tickets:status.CLOSED')}</option>
+                        {/* Current state is always an option */}
+                        <option value={ticket.status}>{t(`tickets:status.${ticket.status}`)}</option>
+
+                        {/* OPEN can only advance to IN_PROGRESS (if assigned) */}
+                        {ticket.status === 'OPEN' && (
+                          <option
+                            value="IN_PROGRESS"
+                            disabled={!assignedToVal && !ticket.assigned_to}
+                          >
+                            {t('tickets:status.IN_PROGRESS')} {!assignedToVal && !ticket.assigned_to ? '(Asignar primero)' : ''}
+                          </option>
+                        )}
+
+                        {/* IN_PROGRESS can go back to OPEN or advance to RESOLVED */}
+                        {ticket.status === 'IN_PROGRESS' && (
+                          <>
+                            <option value="OPEN">{t('tickets:status.OPEN')}</option>
+                            <option value="RESOLVED">{t('tickets:status.RESOLVED')}</option>
+                          </>
+                        )}
+
+                        {/* RESOLVED can reopen to IN_PROGRESS or advance to CLOSED */}
+                        {ticket.status === 'RESOLVED' && (
+                          <>
+                            <option value="IN_PROGRESS">{t('tickets:status.IN_PROGRESS')}</option>
+                            <option value="CLOSED">{t('tickets:status.CLOSED')}</option>
+                          </>
+                        )}
+
+                        {/* CLOSED can only be reopened by Sysadmin/Resolver if needed */}
+                        {ticket.status === 'CLOSED' && (
+                          <option value="IN_PROGRESS">{t('tickets:status.IN_PROGRESS')}</option>
+                        )}
                       </select>
                     </div>
 
@@ -397,8 +428,7 @@ export default function TicketDetailPage() {
                               type="button"
                               onClick={() => {
                                 const target = new Date(Date.now() + hrs * 3600 * 1000);
-                                const localIso = new Date(target.getTime() - target.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-                                setEstimatedResolutionVal(localIso);
+                                setEstimatedResolutionVal(toLocalInputDateTime(target));
                               }}
                               className="px-2.5 py-1 rounded-lg bg-surface hover:bg-teal/20 hover:text-teal-glow text-text-secondary border border-border text-xs font-semibold transition-all cursor-pointer active:scale-95"
                             >
@@ -487,7 +517,7 @@ export default function TicketDetailPage() {
                         <input
                           type="datetime-local"
                           value={resolvedAtVal}
-                          max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+                          max={toLocalInputDateTime(new Date())}
                           onChange={(e) => setResolvedAtVal(e.target.value)}
                           className="w-full px-3 py-2 bg-obsidian border border-status-resolved/30 rounded-lg text-text-primary text-sm focus:border-status-resolved outline-none [color-scheme:dark]"
                         />
@@ -504,7 +534,6 @@ export default function TicketDetailPage() {
                           {t('tickets:detail.resolution_docs_heading')}
                         </label>
                         <textarea
-                          required
                           rows={4}
                           placeholder={t('tickets:detail.resolution_placeholder')}
                           value={resDocs}

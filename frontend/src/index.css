@@ -184,3 +184,25 @@ body {
   border-color: var(--color-border-light);
   box-shadow: var(--shadow-card), 0 0 0 1px rgba(13, 92, 77, 0.1);
 }
+
+/* ── Kanban Drag & Drop ── */
+@keyframes drop-hint-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.kanban-drop-zone {
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.kanban-drop-zone.drag-active {
+  animation: drop-hint-pulse 1.2s ease-in-out infinite;
+}
+
+/* Card ghost while dragging */
+.card-dragging {
+  opacity: 0.4;
+  transform: scale(0.95) rotate(1deg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  cursor: grabbing !important;
+}

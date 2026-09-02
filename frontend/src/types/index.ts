@@ -65,6 +65,8 @@ export interface Ticket {
   assigned_to?: UserMinimal | null;
   attachments?: TicketAttachment[];
   started_at?: string | null;
+  estimated_resolution_time?: string | null;
+  estimated_work_hours?: string | null;
   resolved_at?: string | null;
   resolution_documentation?: string | null;
   created_at: string;

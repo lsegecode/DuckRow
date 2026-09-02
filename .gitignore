@@ -161,6 +161,14 @@ ENV/
 env.bak/
 venv.bak/
 
+# Uploaded Media & Ticket Attachments
+media/
+backend/media/
+ticket_attachments/
+*.dump
+*.sql
+*.backup
+
 # Spyder project settings
 .spyderproject
 .spyproject

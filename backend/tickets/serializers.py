@@ -14,6 +14,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from .models import Ticket, TicketAttachment
+from .teams_notifications import notify_ticket_created, notify_ticket_ready_for_review
 from users.models import Area
 from users.serializers import UserMinimalSerializer, AreaSerializer
 
@@ -50,10 +51,10 @@ class TicketListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'ticket_type', 'status', 'urgency', 'internal_priority',
             'source_area', 'created_by', 'assigned_to',
-            'assigned_at', 'resolved_at', 'estimated_resolution_time',
+            'started_at', 'resolved_at',
             'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'assigned_at', 'resolved_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'started_at', 'resolved_at']
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -182,6 +183,12 @@ class TicketCreateSerializer(serializers.ModelSerializer):
                     file_size=f.size,
                 )
 
+        # Dispatch async notification to Microsoft Teams if configured
+        try:
+            notify_ticket_created(ticket)
+        except Exception:
+            pass
+
         return ticket
 
     def to_representation(self, instance):
@@ -213,11 +220,24 @@ class TicketUpdateSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
 
+    estimated_resolution_time = serializers.DateTimeField(
+        required=False,
+        allow_null=True,
+    )
+
+    estimated_work_hours = serializers.CharField(
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+        max_length=50,
+    )
+
     class Meta:
         model = Ticket
         fields = [
             'id', 'title', 'ticket_type', 'description', 'status', 'urgency',
             'internal_priority', 'assigned_to_id', 'resolution_documentation',
+            'estimated_resolution_time', 'estimated_work_hours',
             'started_at', 'resolved_at', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -228,8 +248,9 @@ class TicketUpdateSerializer(serializers.ModelSerializer):
 
         if role == 'RESOLVER':
             allowed_fields = {
-                'status', 'internal_priority', 'resolution_documentation',
-                'started_at', 'resolved_at',
+                'status', 'internal_priority', 'assigned_to_id',
+                'resolution_documentation', 'started_at', 'resolved_at',
+                'estimated_resolution_time', 'estimated_work_hours',
             }
             incoming_fields = set(attrs.keys())
             forbidden = incoming_fields - allowed_fields
@@ -285,10 +306,19 @@ class TicketUpdateSerializer(serializers.ModelSerializer):
         elif new_status == 'OPEN' and instance.status in ('RESOLVED', 'CLOSED'):
             instance.resolved_at = None
 
+        old_status = instance.status
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
         instance.save()
+
+        # If ticket was marked as RESOLVED (ready for review / closing), send Teams alert
+        if instance.status == 'RESOLVED' and old_status != 'RESOLVED':
+            try:
+                notify_ticket_ready_for_review(instance)
+            except Exception:
+                pass
+
         return instance
 
     def to_representation(self, instance):
