@@ -94,7 +94,12 @@
     "close_preview": "Cerrar vista previa",
     "resolved_at_label": "📅 ¿Cuándo fue resuelto?",
     "resolved_at_hint": "Puedes ingresar una fecha pasada si la resolución ocurrió antes.",
-    "resolution_duration_preview": "Duración: {{duration}}"
+    "resolution_duration_preview": "Duración: {{duration}}",
+    "edit_context_button": "Editar Ticket / Contexto",
+    "edit_modal_title": "Editar Ticket / Agregar Contexto",
+    "edit_modal_subtitle": "Modifica el resumen, agrega más detalles a la descripción o adjunta nuevas capturas",
+    "description_placeholder": "Escribe o amplía la información del ticket...",
+    "add_screenshots_label": "Agregar Nuevas Capturas"
   },
   "wizard": {
     "step_context": "Contexto",

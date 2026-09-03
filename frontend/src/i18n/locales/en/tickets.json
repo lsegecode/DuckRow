@@ -94,7 +94,12 @@
     "close_preview": "Close preview",
     "resolved_at_label": "📅 When was it resolved?",
     "resolved_at_hint": "You can set a past date if the resolution happened earlier.",
-    "resolution_duration_preview": "Duration: {{duration}}"
+    "resolution_duration_preview": "Duration: {{duration}}",
+    "edit_context_button": "Edit Ticket / Context",
+    "edit_modal_title": "Edit Ticket / Add Context",
+    "edit_modal_subtitle": "Modify the summary, expand the description, or attach new screenshots",
+    "description_placeholder": "Write or expand the ticket details...",
+    "add_screenshots_label": "Add New Screenshots"
   },
   "wizard": {
     "step_context": "Context",

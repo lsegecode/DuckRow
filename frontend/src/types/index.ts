@@ -94,6 +94,7 @@ export interface TicketUpdatePayload {
   estimated_work_hours?: string | null;
   resolution_documentation?: string | null;
   resolved_at?: string | null;
+  uploaded_images?: string[];
 }
 
 export interface TicketStats {

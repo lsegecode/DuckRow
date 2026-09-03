@@ -10,6 +10,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Ticket, TicketStatus, UserProfile, Role } from '../types';
 import { toLocalInputDateTime } from '../utils/dateUtils';
+import CustomDateTimePicker from './CustomDateTimePicker';
 
 interface KanbanDragModalProps {
   ticket: Ticket;
@@ -114,7 +115,7 @@ export default function KanbanDragModal({
           opacity: visible ? 1 : 0,
           transform: visible ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.96)',
         }}
-        className="w-full max-w-md bg-obsidian-light border border-border rounded-2xl shadow-2xl overflow-hidden"
+        className="w-full max-w-md bg-obsidian-light border border-border rounded-2xl shadow-2xl overflow-visible"
       >
         {/* Header */}
         <div className="px-6 py-4 border-b border-border/60 flex items-start justify-between gap-3">
@@ -138,34 +139,26 @@ export default function KanbanDragModal({
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5 space-y-4">
+        <div className="p-6 space-y-4">
 
           {/* Scenario: → IN_PROGRESS + SYSADMIN */}
           {isMovingToProgress && role === 'SYSADMIN' && (
             <div>
               <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                👤 Asignar responsable
+                Asignar resolutor responsable
               </label>
               <select
                 value={assignedToId}
                 onChange={(e) => setAssignedToId(e.target.value ? Number(e.target.value) : '')}
-                className="w-full px-3 py-2.5 bg-obsidian border border-border rounded-xl text-text-primary text-sm focus:border-teal outline-none cursor-pointer"
+                className="w-full px-3 py-2 bg-obsidian border border-border rounded-xl text-text-primary text-sm focus:border-teal outline-none cursor-pointer"
               >
                 <option value="">— Sin asignar —</option>
-                {resolvers.map((r) => (
-                  <option key={r.user.id} value={r.user.id}>
-                    {r.user.first_name || r.user.username}
+                {resolvers.map((res) => (
+                  <option key={res.user.id} value={res.user.id}>
+                    {res.user.first_name || res.user.username}
                   </option>
                 ))}
               </select>
-              {ticket.assigned_to && (
-                <p className="text-[11px] text-text-muted mt-1.5">
-                  Asignado actualmente:{' '}
-                  <span className="text-text-secondary font-medium">
-                    {ticket.assigned_to.first_name || ticket.assigned_to.username}
-                  </span>
-                </p>
-              )}
             </div>
           )}
 
@@ -189,12 +182,12 @@ export default function KanbanDragModal({
                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
                   📅 ¿Cuándo fue resuelto?
                 </label>
-                <input
-                  type="datetime-local"
+                <CustomDateTimePicker
                   value={resolvedAt}
                   max={toLocalInputDateTime(new Date())}
-                  onChange={(e) => setResolvedAt(e.target.value)}
-                  className="w-full px-3 py-2 bg-obsidian border border-status-resolved/30 rounded-xl text-text-primary text-sm focus:border-status-resolved outline-none [color-scheme:dark]"
+                  onChange={(val) => setResolvedAt(val)}
+                  accentColor="resolved"
+                  placeholder="dd/mm/aaaa hh:mm"
                 />
               </div>
               <div>

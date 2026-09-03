@@ -7,4 +7,5 @@ python-dotenv>=1.0.0
 requests>=2.31.0
 mssql-django>=1.8.0
 pyodbc>=5.0.0
+drf-spectacular>=0.28.0
 

@@ -232,13 +232,19 @@ class TicketUpdateSerializer(serializers.ModelSerializer):
         max_length=50,
     )
 
+    uploaded_images = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        write_only=True,
+    )
+
     class Meta:
         model = Ticket
         fields = [
             'id', 'title', 'ticket_type', 'description', 'status', 'urgency',
             'internal_priority', 'assigned_to_id', 'resolution_documentation',
             'estimated_resolution_time', 'estimated_work_hours',
-            'started_at', 'resolved_at', 'created_at', 'updated_at',
+            'started_at', 'resolved_at', 'uploaded_images', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -246,8 +252,19 @@ class TicketUpdateSerializer(serializers.ModelSerializer):
         request = self.context['request']
         role = request.user.profile.role
 
-        if role == 'RESOLVER':
+        if role == 'CLIENT':
+            allowed_fields = {'title', 'ticket_type', 'description', 'urgency', 'uploaded_images'}
+            incoming_fields = set(attrs.keys())
+            forbidden = incoming_fields - allowed_fields
+            if forbidden:
+                raise serializers.ValidationError(
+                    f'Clients can only update ticket context: {", ".join(allowed_fields)}. '
+                    f'Forbidden fields: {", ".join(forbidden)}'
+                )
+
+        elif role == 'RESOLVER':
             allowed_fields = {
+                'title', 'ticket_type', 'description', 'urgency', 'uploaded_images',
                 'status', 'internal_priority', 'assigned_to_id',
                 'resolution_documentation', 'started_at', 'resolved_at',
                 'estimated_resolution_time', 'estimated_work_hours',
@@ -270,7 +287,9 @@ class TicketUpdateSerializer(serializers.ModelSerializer):
         return attrs
 
     def update(self, instance, validated_data):
+        uploaded_images = validated_data.pop('uploaded_images', [])
         assigned_to_id = validated_data.pop('assigned_to_id', None)
+
 
         if assigned_to_id is not None:
             try:
@@ -311,6 +330,37 @@ class TicketUpdateSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
 
         instance.save()
+
+        # Process Base64 images from JSON payload
+        for idx, img_str in enumerate(uploaded_images):
+            if isinstance(img_str, str) and img_str.startswith('data:image'):
+                try:
+                    header, base64_str = img_str.split(';base64,')
+                    ext = header.split('/')[-1].split('+')[0]
+                    if ext == 'jpeg':
+                        ext = 'jpg'
+                    data = base64.b64decode(base64_str)
+                    file_name = f'attachment_{instance.attachments.count() + idx + 1}.{ext}'
+                    content_file = ContentFile(data, name=file_name)
+                    TicketAttachment.objects.create(
+                        ticket=instance,
+                        file=content_file,
+                        file_name=file_name,
+                        file_size=len(data),
+                    )
+                except Exception:
+                    pass
+
+        # Process multipart/form-data files if provided
+        request = self.context.get('request')
+        if request and hasattr(request, 'FILES'):
+            for f in request.FILES.getlist('images'):
+                TicketAttachment.objects.create(
+                    ticket=instance,
+                    file=f,
+                    file_name=f.name,
+                    file_size=f.size,
+                )
 
         # If ticket was marked as RESOLVED (ready for review / closing), send Teams alert
         if instance.status == 'RESOLVED' and old_status != 'RESOLVED':

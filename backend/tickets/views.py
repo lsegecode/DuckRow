@@ -37,6 +37,7 @@ class TicketViewSet(viewsets.ModelViewSet):
     filterset_class = TicketFilter
     search_fields = ['title', 'description']
     ordering_fields = ['created_at', 'updated_at', 'urgency', 'status', 'assigned_at', 'resolved_at']
+    queryset = Ticket.objects.none()
 
     def get_queryset(self):
         """
@@ -45,8 +46,15 @@ class TicketViewSet(viewsets.ModelViewSet):
         Returns only the tickets the authenticated user is authorized
         to see based on their role.
         """
+        if getattr(self, 'swagger_fake_view', False):
+            return Ticket.objects.none()
+
         user = self.request.user
+        if not user or not user.is_authenticated or not hasattr(user, 'profile'):
+            return Ticket.objects.none()
+
         profile = user.profile
+
 
         if profile.role == 'SYSADMIN':
             return Ticket.objects.all().select_related(
@@ -63,10 +71,10 @@ class TicketViewSet(viewsets.ModelViewSet):
         if profile.role == 'CLIENT':
             user_authorized_areas = profile.areas.all()
             return Ticket.objects.filter(
-                source_area__in=user_authorized_areas,
+                models.Q(source_area__in=user_authorized_areas) | models.Q(created_by=user)
             ).select_related(
                 'created_by', 'source_area',
-            ).prefetch_related('attachments')
+            ).prefetch_related('attachments').distinct()
 
         return Ticket.objects.none()
 

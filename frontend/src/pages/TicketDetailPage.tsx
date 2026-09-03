@@ -11,6 +11,8 @@ import TicketTypeBadge from '../components/TicketTypeBadge';
 import StructuredDescription from '../components/StructuredDescription';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { formatDateTime, formatDuration, toLocalInputDateTime } from '../utils/dateUtils';
+import CustomDateTimePicker from '../components/CustomDateTimePicker';
+import EditTicketModal from '../components/EditTicketModal';
 import type { Ticket, TicketStatus, Priority, UserProfile } from '../types';
 
 export default function TicketDetailPage() {
@@ -28,6 +30,7 @@ export default function TicketDetailPage() {
   const [resolvedAtVal, setResolvedAtVal] = useState('');
   const [resDocs, setResDocs] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditContextOpen, setIsEditContextOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // Fetch ticket details
@@ -168,11 +171,13 @@ export default function TicketDetailPage() {
     }
   };
 
+  const isCreator = ticket.created_by?.id === user?.id;
   const isAssignedResolver = ticket.assigned_to?.id === user?.id;
   const isUnassigned = !ticket.assigned_to;
   const canClaim = isUnassigned && (role === 'RESOLVER' || role === 'SYSADMIN');
   const canUpdate = role === 'SYSADMIN' || (role === 'RESOLVER' && (isAssignedResolver || isUnassigned));
   const canDelete = role === 'SYSADMIN';
+  const canEditContext = isCreator || role === 'SYSADMIN' || (role === 'RESOLVER' && (isAssignedResolver || isUnassigned || isCreator));
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-fade-in">
@@ -186,15 +191,27 @@ export default function TicketDetailPage() {
           {t('tickets:detail.back_to_list')}
         </Link>
 
-        {canClaim && (
-          <button
-            onClick={() => claimTicketMutation.mutate()}
-            disabled={claimTicketMutation.isPending}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-teal hover:bg-teal-light text-white font-semibold rounded-xl text-xs shadow-[var(--shadow-glow-teal)] transition-all active:scale-[0.98]"
-          >
-            {claimTicketMutation.isPending ? t('tickets:detail.claiming') : t('tickets:detail.assign_to_me')}
-          </button>
-        )}
+        <div className="flex items-center gap-2.5">
+          {canEditContext && (
+            <button
+              onClick={() => setIsEditContextOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-surface hover:bg-surface-hover text-text-primary font-semibold rounded-xl text-xs border border-border transition-all cursor-pointer active:scale-[0.98]"
+            >
+              <span>✏️</span>
+              <span>{t('tickets:detail.edit_context_button', 'Editar Ticket')}</span>
+            </button>
+          )}
+
+          {canClaim && (
+            <button
+              onClick={() => claimTicketMutation.mutate()}
+              disabled={claimTicketMutation.isPending}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-teal hover:bg-teal-light text-white font-semibold rounded-xl text-xs shadow-[var(--shadow-glow-teal)] transition-all active:scale-[0.98]"
+            >
+              {claimTicketMutation.isPending ? t('tickets:detail.claiming') : t('tickets:detail.assign_to_me')}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -231,7 +248,20 @@ export default function TicketDetailPage() {
 
             {/* Description broken into structured sections */}
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">{t('tickets:detail.description_heading')}</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">
+                  {t('tickets:detail.description_heading')}
+                </h3>
+                {canEditContext && (
+                  <button
+                    onClick={() => setIsEditContextOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-teal/10 hover:bg-teal/20 text-teal-glow text-xs font-semibold rounded-lg border border-teal/20 transition-all cursor-pointer"
+                  >
+                    <span>✏️</span>
+                    <span>{t('tickets:detail.edit_context_button', 'Editar contexto')}</span>
+                  </button>
+                )}
+              </div>
               <StructuredDescription description={ticket.description} />
             </div>
 
@@ -438,11 +468,11 @@ export default function TicketDetailPage() {
                         </div>
                       </div>
 
-                      <input
-                        type="datetime-local"
+                      <CustomDateTimePicker
                         value={estimatedResolutionVal}
-                        onChange={(e) => setEstimatedResolutionVal(e.target.value)}
-                        className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none [color-scheme:dark]"
+                        onChange={(val) => setEstimatedResolutionVal(val)}
+                        accentColor="teal"
+                        placeholder="dd/mm/aaaa hh:mm"
                       />
                     </div>
 
@@ -514,12 +544,12 @@ export default function TicketDetailPage() {
                           )}
                         </div>
                         <p className="text-[11px] text-text-muted">{t('tickets:detail.resolved_at_hint')}</p>
-                        <input
-                          type="datetime-local"
+                        <CustomDateTimePicker
                           value={resolvedAtVal}
                           max={toLocalInputDateTime(new Date())}
-                          onChange={(e) => setResolvedAtVal(e.target.value)}
-                          className="w-full px-3 py-2 bg-obsidian border border-status-resolved/30 rounded-lg text-text-primary text-sm focus:border-status-resolved outline-none [color-scheme:dark]"
+                          onChange={(val) => setResolvedAtVal(val)}
+                          accentColor="resolved"
+                          placeholder="dd/mm/aaaa hh:mm"
                         />
                         {resolvedAtPreviewDuration && (
                           <p className="text-xs font-semibold text-status-resolved">
@@ -709,6 +739,23 @@ export default function TicketDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Edit Ticket Context Modal */}
+      {canEditContext && (
+        <EditTicketModal
+          ticket={ticket}
+          isOpen={isEditContextOpen}
+          onClose={() => setIsEditContextOpen(false)}
+          onSave={(payload) => {
+            updateTicketMutation.mutate(payload, {
+              onSuccess: () => {
+                setIsEditContextOpen(false);
+              },
+            });
+          }}
+          isPending={updateTicketMutation.isPending}
+        />
+      )}
 
       {/* Lightbox Modal */}
       {previewImage && (
