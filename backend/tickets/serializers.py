@@ -325,6 +325,12 @@ class TicketUpdateSerializer(serializers.ModelSerializer):
         elif new_status == 'OPEN' and instance.status in ('RESOLVED', 'CLOSED'):
             instance.resolved_at = None
 
+        # When resolving or closing, ensure assigned_to is set to the user performing the action if unset
+        if new_status in ('RESOLVED', 'CLOSED') and instance.assigned_to is None:
+            request = self.context.get('request')
+            if request and hasattr(request, 'user') and request.user.is_authenticated:
+                instance.assigned_to = request.user
+
         old_status = instance.status
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -362,8 +368,13 @@ class TicketUpdateSerializer(serializers.ModelSerializer):
                     file_size=f.size,
                 )
 
-        # If ticket was marked as RESOLVED (ready for review / closing), send Teams alert
-        if instance.status == 'RESOLVED' and old_status != 'RESOLVED':
+        # If ticket was marked as RESOLVED or CLOSED, send Teams alert
+        if instance.status in ('RESOLVED', 'CLOSED') and old_status not in ('RESOLVED', 'CLOSED'):
+            try:
+                notify_ticket_ready_for_review(instance)
+            except Exception:
+                pass
+        elif instance.status == 'CLOSED' and old_status == 'RESOLVED':
             try:
                 notify_ticket_ready_for_review(instance)
             except Exception:

@@ -36,6 +36,18 @@ def _build_ticket_url(ticket_id):
     return f"{frontend_base}/tickets/{ticket_id}"
 
 
+def _format_user_name(user):
+    """Formats user display name cleanly for Teams Adaptive Cards."""
+    if not user:
+        return "Sin asignar"
+    full_name = f"{user.first_name} {user.last_name}".strip()
+    if full_name and user.username:
+        return f"{full_name} ({user.username})"
+    if full_name:
+        return full_name
+    return user.username or "Usuario"
+
+
 def notify_ticket_created(ticket):
     """
     Constructs an Adaptive Card (v1.4) for NEW tickets
@@ -48,11 +60,13 @@ def notify_ticket_created(ticket):
     ticket_url = _build_ticket_url(ticket.id)
     type_label = '🐞 Error / Bug' if ticket.ticket_type == 'BUG' else '✨ Solicitud / Mejora'
     area_name = ticket.source_area.name if ticket.source_area else 'General'
+    creator_name = _format_user_name(ticket.created_by)
 
     facts = [
         {"title": "🏷️ Tipo:", "value": type_label},
         {"title": "🏢 Área:", "value": area_name},
         {"title": "📌 Título:", "value": ticket.title},
+        {"title": "👤 Creado por:", "value": creator_name},
     ]
 
     payload = {
@@ -113,11 +127,17 @@ def notify_ticket_ready_for_review(ticket):
     ticket_url = _build_ticket_url(ticket.id)
     type_label = '🐞 Error / Bug' if ticket.ticket_type == 'BUG' else '✨ Solicitud / Mejora'
     area_name = ticket.source_area.name if ticket.source_area else 'General'
+    creator_name = _format_user_name(ticket.created_by)
+    resolver_name = _format_user_name(ticket.assigned_to)
+
+    status_title = "🏁 Ticket Cerrado" if ticket.status == 'CLOSED' else "🏁 Ticket para Cerrar (Revisión)"
 
     facts = [
         {"title": "🏷️ Tipo:", "value": type_label},
         {"title": "🏢 Área:", "value": area_name},
         {"title": "📌 Título:", "value": ticket.title},
+        {"title": "👤 Creado por:", "value": creator_name},
+        {"title": "🛠️ Resuelto por:", "value": resolver_name},
     ]
 
     payload = {
@@ -132,7 +152,7 @@ def notify_ticket_ready_for_review(ticket):
                     "body": [
                         {
                             "type": "TextBlock",
-                            "text": "🏁 Ticket para Cerrar (Revisión)",
+                            "text": status_title,
                             "weight": "Bolder",
                             "size": "Large",
                             "color": "Good"
@@ -164,3 +184,4 @@ def notify_ticket_ready_for_review(ticket):
 
     thread = threading.Thread(target=_send_payload_async, args=(webhook_url, payload), daemon=True)
     thread.start()
+
