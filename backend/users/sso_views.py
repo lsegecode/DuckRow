@@ -176,24 +176,11 @@ def sso_exchange_view(request):
 
     # 4. Redirect to frontend SSO callback landing page with tokens in URL hash
     configured_frontend = getattr(settings, 'FRONTEND_URL', '').strip().rstrip('/')
-    host_header = request.get_host()
-    host_name = host_header.split(':')[0]
-    scheme = 'https' if request.is_secure() else 'http'
 
-    # 1. If FRONTEND_URL is explicitly configured in .env, use it directly
-    if configured_frontend:
-        frontend_origin = configured_frontend
-    # 2. If request comes with an explicit port in Host header
-    elif ':' in host_header:
-        port = host_header.split(':')[1]
-        # If accessing backend directly on 8000 or dev 8900, map to dev frontend
-        if port in ('8000', '8900'):
-            frontend_origin = f"{scheme}://{host_name}:5173"
-        else:
-            frontend_origin = f"{scheme}://{host_header}"
-    # 3. Otherwise standard HTTP/HTTPS (port 80/443 without port in URL)
+    # If FRONTEND_URL is explicitly set to an absolute URL, use it; otherwise use relative path /sso-callback
+    if configured_frontend and configured_frontend.startswith('http'):
+        frontend_sso_url = f"{configured_frontend}/sso-callback#access={access_token}&refresh={refresh_token}"
     else:
-        frontend_origin = f"{scheme}://{host_name}"
+        frontend_sso_url = f"/sso-callback#access={access_token}&refresh={refresh_token}"
 
-    frontend_sso_url = f"{frontend_origin}/sso-callback#access={access_token}&refresh={refresh_token}"
     return redirect(frontend_sso_url)
