@@ -180,19 +180,20 @@ def sso_exchange_view(request):
     host_name = host_header.split(':')[0]
     scheme = 'https' if request.is_secure() else 'http'
 
-    # 1. If request comes from an external/LAN IP or DNS (not localhost), preserve that host on port 5173
-    if host_name and host_name not in ('127.0.0.1', 'localhost'):
-        frontend_origin = f"{scheme}://{host_name}:5173"
-    # 2. If FRONTEND_URL is explicitly configured in .env, use it
-    elif configured_frontend:
+    # 1. If FRONTEND_URL is explicitly configured in .env, use it directly
+    if configured_frontend:
         frontend_origin = configured_frontend
-    # 3. Fallback to host replacement on port 5173
-    elif ':8900' in host_header:
-        frontend_origin = f"{scheme}://{host_header.replace(':8900', ':5173')}"
-    elif ':8000' in host_header:
-        frontend_origin = f"{scheme}://{host_header.replace(':8000', ':5173')}"
+    # 2. If request comes with an explicit port in Host header
+    elif ':' in host_header:
+        port = host_header.split(':')[1]
+        # If accessing backend directly on 8000 or dev 8900, map to dev frontend
+        if port in ('8000', '8900'):
+            frontend_origin = f"{scheme}://{host_name}:5173"
+        else:
+            frontend_origin = f"{scheme}://{host_header}"
+    # 3. Otherwise standard HTTP/HTTPS (port 80/443 without port in URL)
     else:
-        frontend_origin = f"{scheme}://{host_name}:5173" if host_name else ""
+        frontend_origin = f"{scheme}://{host_name}"
 
     frontend_sso_url = f"{frontend_origin}/sso-callback#access={access_token}&refresh={refresh_token}"
     return redirect(frontend_sso_url)
