@@ -52,6 +52,12 @@ class UserProfile(models.Model):
         ('SYSADMIN', _('System Administrator')),
     ]
 
+    BRANCH_CHOICES = [
+        ('RESISTENCIA', _('Resistencia')),
+        ('CTES', _('Corrientes')),
+        ('ALL', _('Todas')),
+    ]
+
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -68,6 +74,12 @@ class UserProfile(models.Model):
         max_length=20,
         choices=ROLE_CHOICES,
         default='CLIENT',
+    )
+
+    branch = models.CharField(
+        max_length=20,
+        choices=BRANCH_CHOICES,
+        default='RESISTENCIA',
     )
 
     areas = models.ManyToManyField(

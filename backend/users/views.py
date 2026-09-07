@@ -89,10 +89,18 @@ def sync_users_from_role_overrides():
                 with open(path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
 
-                for role_name, usernames in data.items():
-                    if isinstance(usernames, list):
-                        for uname in usernames:
-                            clean_uname = uname.strip()
+                for role_name, entries in data.items():
+                    if isinstance(entries, list):
+                        for entry in entries:
+                            if isinstance(entry, str):
+                                clean_uname = entry.strip()
+                                branch_val = 'ALL' if role_name.upper() == 'SYSADMIN' else 'RESISTENCIA'
+                            elif isinstance(entry, dict):
+                                clean_uname = str(entry.get('username', '')).strip()
+                                branch_val = str(entry.get('branch', 'ALL' if role_name.upper() == 'SYSADMIN' else 'RESISTENCIA')).strip().upper()
+                            else:
+                                continue
+
                             if clean_uname and clean_uname.lower() not in ['username1', 'username2', 'username3']:
                                 u, created = User.objects.get_or_create(
                                     username=clean_uname,
@@ -101,6 +109,8 @@ def sync_users_from_role_overrides():
                                 if hasattr(u, 'profile'):
                                     p = u.profile
                                     p.role = role_name.upper()
+                                    if branch_val:
+                                        p.branch = branch_val
                                     p.save()
                                     if p.areas.count() == 0:
                                         p.areas.add(general_area)
@@ -111,6 +121,7 @@ def sync_users_from_role_overrides():
 class ResolverListView(generics.ListAPIView):
     """
     List all users with RESOLVER or SYSADMIN role available to be assigned to tickets.
+    Supports optional ?branch=CTES or ?branch=RESISTENCIA filtering.
     """
 
     serializer_class = UserProfileSerializer
@@ -118,13 +129,19 @@ class ResolverListView(generics.ListAPIView):
 
     def get_queryset(self):
         sync_users_from_role_overrides()
-        return (
+        qs = (
             UserProfile.objects
             .filter(role__in=['RESOLVER', 'SYSADMIN'])
             .select_related('user')
             .prefetch_related('areas')
             .order_by('user__username')
         )
+        branch_filter = self.request.query_params.get('branch')
+        if branch_filter:
+            branch_clean = branch_filter.strip().upper()
+            from django.db.models import Q
+            qs = qs.filter(Q(branch=branch_clean) | Q(branch='ALL'))
+        return qs
 
 
 class CurrentUserView(generics.RetrieveAPIView):

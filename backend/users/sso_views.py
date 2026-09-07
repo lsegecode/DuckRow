@@ -15,10 +15,12 @@ User = get_user_model()
 import json
 from pathlib import Path
 
-def get_override_role(username: str, default_role: str) -> str:
+def get_override_user_config(username: str, default_role: str = 'CLIENT') -> tuple[str, str | None]:
     """
     Checks role_overrides.json in backend/ or root project directory
-    to see if the given username has an explicit role assignment.
+    to see if the given username has an explicit role and/or branch assignment.
+    Supports either string list ["user1", "user2"] or object list [{"username": "user1", "branch": "RESISTENCIA"}].
+    Returns (role, branch_or_none).
     """
     base_dir = Path(settings.BASE_DIR)
     json_paths = [
@@ -34,15 +36,27 @@ def get_override_role(username: str, default_role: str) -> str:
                 with open(path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
 
-                for role_name, usernames in data.items():
-                    if isinstance(usernames, list):
-                        normalized_list = [str(u).strip().lower() for u in usernames]
-                        if clean_username in normalized_list:
-                            return role_name.upper()
+                for role_name, entries in data.items():
+                    if isinstance(entries, list):
+                        for entry in entries:
+                            if isinstance(entry, str):
+                                if clean_username == entry.strip().lower():
+                                    return role_name.upper(), None
+                            elif isinstance(entry, dict):
+                                u = str(entry.get('username', '')).strip().lower()
+                                if clean_username == u:
+                                    b = entry.get('branch')
+                                    branch_val = str(b).strip().upper() if b else None
+                                    return role_name.upper(), branch_val
             except Exception as e:
                 print(f"[ROLE OVERRIDE WARNING] Error reading {path}: {e}")
 
-    return default_role
+    return default_role, None
+
+
+def get_override_role(username: str, default_role: str) -> str:
+    role, _ = get_override_user_config(username, default_role)
+    return role
 
 
 def sso_exchange_view(request):
@@ -127,7 +141,36 @@ def sso_exchange_view(request):
             default_role = 'CLIENT'
 
         # Apply role override from role_overrides.json if configured
-        profile.role = get_override_role(user.username, default_role)
+        override_role, override_branch = get_override_user_config(user.username, default_role)
+        profile.role = override_role
+
+        # Determine user branch:
+        # Priority 1: Explicit override in role_overrides.json
+        if override_branch:
+            profile.branch = override_branch
+        # Priority 2: Sysadmin gets access to ALL branches by default
+        elif profile.role == 'SYSADMIN':
+            profile.branch = 'ALL'
+        else:
+            # Priority 3: Extract from SSO payload ('sucursales', 'sucursal', 'area', etc.)
+            sucursales_raw = payload.get('sucursales') or []
+            if isinstance(sucursales_raw, str):
+                sucursales_raw = [sucursales_raw]
+            sucursales_upper = [str(s).strip().upper() for s in sucursales_raw]
+
+            area_str = str(payload.get('area', '')).strip().upper()
+            all_indicators = sucursales_upper + [area_str]
+
+            has_ctes = any('CTES' in s or 'CORRIENTES' in s for s in all_indicators)
+            has_resistencia = any('RESISTENCIA' in s or 'CHACO' in s for s in all_indicators)
+
+            if has_ctes and has_resistencia:
+                profile.branch = 'ALL'
+            elif has_ctes:
+                profile.branch = 'CTES'
+            else:
+                profile.branch = 'RESISTENCIA'
+
         profile.save()
 
         # Collect target area names specified in home-web payload

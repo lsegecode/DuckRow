@@ -20,10 +20,13 @@ export interface Area {
   created_at: string;
 }
 
+export type Branch = 'RESISTENCIA' | 'CTES' | 'ALL';
+
 export interface UserProfile {
   id: string;
   user: UserMinimal;
   role: Role;
+  branch?: Branch;
   areas: Area[];
   created_at: string;
 }
@@ -60,6 +63,7 @@ export interface Ticket {
   status: TicketStatus;
   urgency: Urgency;
   internal_priority?: Priority;
+  branch?: 'RESISTENCIA' | 'CTES';
   source_area: Area;
   created_by: UserMinimal;
   assigned_to?: UserMinimal | null;
@@ -79,6 +83,7 @@ export interface TicketCreatePayload {
   description: string;
   urgency: Urgency;
   source_area_id: string;
+  branch?: 'RESISTENCIA' | 'CTES';
   uploaded_images?: string[];
 }
 

@@ -221,8 +221,16 @@ export default function TicketDetailPage() {
             {/* Header info */}
             <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/50 pb-5">
               <div>
-                <div className="flex items-center gap-2 mb-1.5">
+                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                   <TicketTypeBadge type={ticket.ticket_type || 'BUG'} />
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                    ticket.branch === 'CTES'
+                      ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                      : 'bg-teal/15 text-teal-glow border-teal/30'
+                  }`}>
+                    <span>🏢</span>
+                    <span>{ticket.branch === 'CTES' ? 'Corrientes' : 'Resistencia'}</span>
+                  </span>
                   <span className="text-xs text-text-muted font-mono">{ticket.id}</span>
                 </div>
                 <h1 className="text-2xl font-bold text-text-primary">{ticket.title}</h1>

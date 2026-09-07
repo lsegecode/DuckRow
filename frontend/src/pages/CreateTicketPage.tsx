@@ -27,6 +27,13 @@ export default function CreateTicketPage() {
   const [selectedAreaId, setSelectedAreaId] = useState('');
   const [urgency, setUrgency] = useState<Urgency>('MEDIUM');
 
+  // Multi-branch state: Sysadmin or users with ALL can choose branch.
+  const userBranch = user?.profile?.branch || 'RESISTENCIA';
+  const canSelectBranch = role === 'SYSADMIN' || userBranch === 'ALL';
+  const [selectedBranch, setSelectedBranch] = useState<'RESISTENCIA' | 'CTES'>(
+    userBranch === 'CTES' ? 'CTES' : 'RESISTENCIA'
+  );
+
   // Guided Bug description segments
   const [expectedBehavior, setExpectedBehavior] = useState('');
   const [actualBehavior, setActualBehavior] = useState('');
@@ -170,6 +177,7 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
       description: getCombinedDescription(),
       urgency,
       source_area_id: selectedAreaId,
+      branch: selectedBranch,
       uploaded_images: images.map((img) => img.dataUrl),
     });
   };
@@ -217,6 +225,58 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
             {step === 1 && (
               <div className="space-y-5 animate-fade-in">
                 <h3 className="text-lg font-semibold text-text-primary">{t('tickets:wizard.context_heading')}</h3>
+
+                {/* Branch (Sucursal) Selector for Admins / Users with access to ALL */}
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
+                    🏢 Sucursal
+                  </label>
+                  {canSelectBranch ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBranch('RESISTENCIA')}
+                        className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
+                          selectedBranch === 'RESISTENCIA'
+                            ? 'bg-teal/15 border-teal/50 shadow-[0_0_15px_rgba(20,184,166,0.2)] text-teal-glow'
+                            : 'bg-obsidian border-border text-text-secondary hover:border-border-light hover:bg-surface-hover/30'
+                        }`}
+                      >
+                        <div>
+                          <p className="font-semibold text-sm text-text-primary">Resistencia</p>
+                          <p className="text-xs text-text-muted mt-0.5">Casa Central / Chaco</p>
+                        </div>
+                        {selectedBranch === 'RESISTENCIA' && <span className="text-teal font-bold">✓</span>}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBranch('CTES')}
+                        className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
+                          selectedBranch === 'CTES'
+                            ? 'bg-amber-500/15 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.2)] text-amber-300'
+                            : 'bg-obsidian border-border text-text-secondary hover:border-border-light hover:bg-surface-hover/30'
+                        }`}
+                      >
+                        <div>
+                          <p className="font-semibold text-sm text-text-primary">Corrientes (CTES)</p>
+                          <p className="text-xs text-text-muted mt-0.5">Sucursal Corrientes</p>
+                        </div>
+                        {selectedBranch === 'CTES' && <span className="text-amber-400 font-bold">✓</span>}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="px-4 py-2.5 bg-obsidian border border-border/80 rounded-xl text-sm flex items-center gap-2">
+                      <span className="text-base">📍</span>
+                      <span className="text-text-secondary text-xs">
+                        Sucursal asignada:{' '}
+                        <strong className="text-text-primary font-semibold">
+                          {selectedBranch === 'CTES' ? 'Corrientes (CTES)' : 'Resistencia'}
+                        </strong>
+                      </span>
+                    </div>
+                  )}
+                </div>
 
                 {/* Ticket Type Selector (Bug vs Feature) */}
                 <div>
@@ -554,10 +614,17 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
                     </div>
                   </div>
 
-                  <div>
-                    <span className="text-text-muted block text-xs uppercase tracking-wider font-semibold">{t('tickets:wizard.review_title')}</span>
-                    <p className="text-text-primary font-medium mt-0.5">{title}</p>
-                  </div>
+                    <div>
+                      <span className="text-text-muted block text-xs uppercase tracking-wider font-semibold">🏢 Sucursal de Destino</span>
+                      <span className="inline-block mt-1 px-3 py-1 font-semibold rounded-full border bg-obsidian border-border text-xs text-text-primary">
+                        {selectedBranch === 'CTES' ? '📍 Corrientes (CTES)' : '📍 Resistencia'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-text-muted block text-xs uppercase tracking-wider font-semibold">{t('tickets:wizard.review_title')}</span>
+                      <p className="text-text-primary font-medium mt-0.5">{title}</p>
+                    </div>
 
                   <div>
                     <span className="text-text-muted block text-xs uppercase tracking-wider font-semibold">{t('tickets:wizard.review_dept')}</span>

@@ -24,6 +24,7 @@ class TicketFilter(django_filters.FilterSet):
     source_area = django_filters.UUIDFilter(field_name='source_area__id')
     assigned_to = django_filters.NumberFilter(field_name='assigned_to__id')
 
+    branch = django_filters.ChoiceFilter(choices=Ticket.BRANCH_CHOICES)
     date_from = django_filters.DateFilter(
         field_name='created_at',
         lookup_expr='date__gte',
@@ -56,7 +57,7 @@ class TicketFilter(django_filters.FilterSet):
     class Meta:
         model = Ticket
         fields = [
-            'ticket_type', 'status', 'urgency', 'internal_priority',
+            'ticket_type', 'branch', 'status', 'urgency', 'internal_priority',
             'source_area', 'assigned_to',
             'date_from', 'date_to', 'created_after', 'created_before',
         ]

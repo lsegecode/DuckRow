@@ -243,10 +243,11 @@ HOME_WEB_SSO_SECRET_KEY = raw_sso_secret.strip("'\"").strip() if raw_sso_secret 
 
 
 # ---------------------------------------------------------------------------
-# Microsoft Teams Workflows Webhook Notifications & Links
+# Microsoft Teams / Power Automate Webhook Notifications & Links
 # ---------------------------------------------------------------------------
 
 TEAMS_WEBHOOK_URL = os.getenv('TEAMS_WEBHOOK_URL', '').strip("'\"").strip()
+TEAMS_WEBHOOK_CTES_URL = os.getenv('TEAMS_WEBHOOK_CTES_URL', '').strip("'\"").strip()
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173').strip("'\"").rstrip('/')
 
 

@@ -50,7 +50,7 @@ class TicketListSerializer(serializers.ModelSerializer):
         model = Ticket
         fields = [
             'id', 'title', 'ticket_type', 'status', 'urgency', 'internal_priority',
-            'source_area', 'created_by', 'assigned_to',
+            'branch', 'source_area', 'created_by', 'assigned_to',
             'started_at', 'resolved_at',
             'created_at', 'updated_at',
         ]
@@ -82,7 +82,7 @@ class TicketDetailSerializer(serializers.ModelSerializer):
         model = Ticket
         fields = [
             'id', 'title', 'ticket_type', 'description', 'status', 'urgency',
-            'internal_priority', 'source_area', 'created_by',
+            'internal_priority', 'branch', 'source_area', 'created_by',
             'assigned_to', 'attachments', 'started_at', 'resolved_at',
             'resolution_documentation', 'created_at', 'updated_at',
         ]
@@ -103,10 +103,14 @@ class TicketCreateSerializer(serializers.ModelSerializer):
     Serializer for ticket creation.
 
     Validates that the source_area belongs to the creator's areas (unless SYSADMIN/RESOLVER).
-    Supports ticket_type and optional image/screenshot attachments.
+    Supports ticket_type, optional branch selection for authorized users, and optional image/screenshot attachments.
     """
 
     source_area_id = serializers.UUIDField(write_only=True)
+    branch = serializers.ChoiceField(
+        choices=Ticket.BRANCH_CHOICES,
+        required=False,
+    )
     uploaded_images = serializers.ListField(
         child=serializers.CharField(),
         required=False,
@@ -117,7 +121,7 @@ class TicketCreateSerializer(serializers.ModelSerializer):
         model = Ticket
         fields = [
             'id', 'title', 'ticket_type', 'description', 'urgency',
-            'source_area_id', 'uploaded_images', 'created_at',
+            'branch', 'source_area_id', 'uploaded_images', 'created_at',
         ]
         read_only_fields = ['id', 'created_at']
 
@@ -144,11 +148,24 @@ class TicketCreateSerializer(serializers.ModelSerializer):
         area_id = validated_data.pop('source_area_id')
         uploaded_images = validated_data.pop('uploaded_images', [])
         area = Area.objects.get(id=area_id)
-        user = self.context['request'].user
+        request = self.context['request']
+        user = request.user
+        profile = getattr(user, 'profile', None)
+
+        # Branch resolution:
+        # If user is SYSADMIN or has branch == 'ALL', respect explicitly sent branch.
+        # Otherwise, enforce their assigned profile.branch.
+        user_branch = getattr(profile, 'branch', 'RESISTENCIA')
+        if profile and (profile.role == 'SYSADMIN' or user_branch == 'ALL'):
+            chosen_branch = validated_data.pop('branch', None) or 'RESISTENCIA'
+        else:
+            validated_data.pop('branch', None)
+            chosen_branch = 'CTES' if user_branch == 'CTES' else 'RESISTENCIA'
 
         ticket = Ticket.objects.create(
             created_by=user,
             source_area=area,
+            branch=chosen_branch,
             **validated_data,
         )
 

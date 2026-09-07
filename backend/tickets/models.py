@@ -51,10 +51,21 @@ class Ticket(models.Model):
         ('CLOSED', _('Closed')),
     ]
 
+    BRANCH_CHOICES = [
+        ('RESISTENCIA', _('Resistencia')),
+        ('CTES', _('Corrientes')),
+    ]
+
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
         editable=False,
+    )
+
+    branch = models.CharField(
+        max_length=20,
+        choices=BRANCH_CHOICES,
+        default='RESISTENCIA',
     )
 
     ticket_type = models.CharField(

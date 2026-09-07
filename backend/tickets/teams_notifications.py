@@ -48,12 +48,25 @@ def _format_user_name(user):
     return user.username or "Usuario"
 
 
+def _get_webhook_url_for_ticket(ticket) -> str:
+    """
+    Returns the appropriate Teams / Power Automate Webhook URL
+    based on the ticket's branch:
+    - CTES / Corrientes -> TEAMS_WEBHOOK_CTES_URL
+    - RESISTENCIA / others -> TEAMS_WEBHOOK_URL
+    """
+    branch = getattr(ticket, 'branch', 'RESISTENCIA')
+    if branch == 'CTES':
+        return getattr(settings, 'TEAMS_WEBHOOK_CTES_URL', '').strip()
+    return getattr(settings, 'TEAMS_WEBHOOK_URL', '').strip()
+
+
 def notify_ticket_created(ticket):
     """
     Constructs an Adaptive Card (v1.4) for NEW tickets
-    and dispatches it asynchronously to Microsoft Teams.
+    and dispatches it asynchronously to Microsoft Teams / Power Automate.
     """
-    webhook_url = getattr(settings, 'TEAMS_WEBHOOK_URL', '').strip()
+    webhook_url = _get_webhook_url_for_ticket(ticket)
     if not webhook_url:
         return
 
@@ -61,10 +74,12 @@ def notify_ticket_created(ticket):
     type_label = '🐞 Error / Bug' if ticket.ticket_type == 'BUG' else '✨ Solicitud / Mejora'
     area_name = ticket.source_area.name if ticket.source_area else 'General'
     creator_name = _format_user_name(ticket.created_by)
+    branch_label = 'Corrientes (CTES)' if getattr(ticket, 'branch', '') == 'CTES' else 'Resistencia'
 
     facts = [
+        {"title": "🏢 Sucursal:", "value": branch_label},
         {"title": "🏷️ Tipo:", "value": type_label},
-        {"title": "🏢 Área:", "value": area_name},
+        {"title": "📁 Área:", "value": area_name},
         {"title": "📌 Título:", "value": ticket.title},
         {"title": "👤 Creado por:", "value": creator_name},
     ]
@@ -81,7 +96,7 @@ def notify_ticket_created(ticket):
                     "body": [
                         {
                             "type": "TextBlock",
-                            "text": "🦆 Nuevo Ticket",
+                            "text": f"🦆 Nuevo Ticket - {branch_label}",
                             "weight": "Bolder",
                             "size": "Large",
                             "color": "Accent"
@@ -118,9 +133,9 @@ def notify_ticket_created(ticket):
 def notify_ticket_ready_for_review(ticket):
     """
     Constructs an Adaptive Card (v1.4) for tickets READY FOR REVIEW / CLOSING
-    and dispatches it asynchronously to Microsoft Teams.
+    and dispatches it asynchronously to Microsoft Teams / Power Automate.
     """
-    webhook_url = getattr(settings, 'TEAMS_WEBHOOK_URL', '').strip()
+    webhook_url = _get_webhook_url_for_ticket(ticket)
     if not webhook_url:
         return
 
@@ -129,12 +144,14 @@ def notify_ticket_ready_for_review(ticket):
     area_name = ticket.source_area.name if ticket.source_area else 'General'
     creator_name = _format_user_name(ticket.created_by)
     resolver_name = _format_user_name(ticket.assigned_to)
+    branch_label = 'Corrientes (CTES)' if getattr(ticket, 'branch', '') == 'CTES' else 'Resistencia'
 
-    status_title = "🏁 Ticket Cerrado" if ticket.status == 'CLOSED' else "🏁 Ticket para Cerrar (Revisión)"
+    status_title = f"🏁 Ticket Cerrado - {branch_label}" if ticket.status == 'CLOSED' else f"🏁 Ticket para Cerrar (Revisión) - {branch_label}"
 
     facts = [
+        {"title": "🏢 Sucursal:", "value": branch_label},
         {"title": "🏷️ Tipo:", "value": type_label},
-        {"title": "🏢 Área:", "value": area_name},
+        {"title": "📁 Área:", "value": area_name},
         {"title": "📌 Título:", "value": ticket.title},
         {"title": "👤 Creado por:", "value": creator_name},
         {"title": "🛠️ Resuelto por:", "value": resolver_name},
