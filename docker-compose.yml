@@ -5,8 +5,9 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     volumes:
-      - duckrow_data:/app
-      - duckrow_media:/app/media
+      - ./backend/db.sqlite3:/app/db.sqlite3
+      - ./backend/media:/app/media
+      - ./backend/role_overrides.json:/app/role_overrides.json
     env_file:
       - ./backend/.env
     ports:
@@ -22,6 +23,4 @@ services:
     depends_on:
       - backend
 
-volumes:
-  duckrow_data:
-  duckrow_media:
+
