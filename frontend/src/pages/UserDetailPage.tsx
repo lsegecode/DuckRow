@@ -1,17 +1,23 @@
 /**
  * UserDetailPage — User detail view showing full name, role, email,
  * assigned areas/departments, and ticket history.
+ *
+ * Fully internationalized (EN / ES) with StatusBadge and dateUtils integration.
  */
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { usersApi } from '../api/users';
 import { ticketsApi } from '../api/tickets';
+import StatusBadge from '../components/StatusBadge';
+import { formatDate } from '../utils/dateUtils';
 import type { UserProfile, Ticket } from '../types';
 
 export default function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation(['users', 'common', 'tickets']);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -44,14 +50,14 @@ export default function UserDetailPage() {
         setTickets(allTicketsRes.results || []);
       } catch (err: any) {
         console.error('Error loading user profile:', err);
-        setError('No se pudo cargar la información del usuario.');
+        setError(t('users:load_error'));
       } finally {
         setIsLoading(false);
       }
     }
 
     loadData();
-  }, [id]);
+  }, [id, t]);
 
   const handleCopyEmail = (email: string) => {
     navigator.clipboard.writeText(email);
@@ -63,8 +69,8 @@ export default function UserDetailPage() {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
-          <div className="w-12 h-12 border-4 border-duck-yellow/20 border-t-duck-yellow rounded-full animate-spin" />
-          <p className="text-gray-400 text-sm font-medium">Cargando perfil de usuario...</p>
+          <div className="w-12 h-12 border-4 border-teal/20 border-t-teal rounded-full animate-spin" />
+          <p className="text-text-muted text-sm font-medium">{t('users:loading_profile')}</p>
         </div>
       </div>
     );
@@ -73,22 +79,22 @@ export default function UserDetailPage() {
   if (error || !profile) {
     return (
       <div className="max-w-4xl mx-auto py-12 px-4 text-center">
-        <div className="bg-obsidian-card border border-red-500/20 rounded-2xl p-8 max-w-md mx-auto">
-          <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-red-400">
+        <div className="glass-card border border-urgency-high/30 rounded-2xl p-8 max-w-md mx-auto shadow-2xl">
+          <div className="w-16 h-16 bg-urgency-high/10 rounded-full flex items-center justify-center mx-auto mb-4 text-urgency-high">
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">Usuario no encontrado</h2>
-          <p className="text-gray-400 text-sm mb-6">{error || 'El usuario solicitado no existe o no tienes permisos para verlo.'}</p>
+          <h2 className="text-xl font-bold text-text-primary mb-2">{t('users:not_found_title')}</h2>
+          <p className="text-text-muted text-sm mb-6">{error || t('users:not_found_desc')}</p>
           <button
             onClick={() => navigate(-1)}
-            className="inline-flex items-center space-x-2 px-5 py-2.5 bg-obsidian-light text-gray-200 hover:text-white rounded-xl hover:bg-gray-800 transition-colors text-sm font-medium cursor-pointer"
+            className="inline-flex items-center space-x-2 px-5 py-2.5 bg-surface text-text-primary hover:bg-surface-hover rounded-xl transition-colors text-sm font-medium cursor-pointer border border-border"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            <span>Volver atrás</span>
+            <span>{t('users:back')}</span>
           </button>
         </div>
       </div>
@@ -113,17 +119,17 @@ export default function UserDetailPage() {
 
   const roleBadges: Record<string, { label: string; bg: string; text: string }> = {
     SYSADMIN: {
-      label: 'Administrador',
-      bg: 'bg-purple-500/10 border-purple-500/30',
-      text: 'text-purple-400',
+      label: t('common:roles.SYSADMIN'),
+      bg: 'bg-gold/15 border-gold/30',
+      text: 'text-gold',
     },
     RESOLVER: {
-      label: 'Resolutor / Soporte',
+      label: t('common:roles.RESOLVER'),
       bg: 'bg-emerald-500/10 border-emerald-500/30',
       text: 'text-emerald-400',
     },
     CLIENT: {
-      label: 'Cliente',
+      label: t('common:roles.CLIENT'),
       bg: 'bg-teal/10 border-teal/30',
       text: 'text-teal-glow',
     },
@@ -132,32 +138,32 @@ export default function UserDetailPage() {
   const currentRole = roleBadges[role] || roleBadges.CLIENT;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 animate-fade-in">
       {/* Top Header & Back Navigation */}
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate(-1)}
-          className="inline-flex items-center space-x-2 text-gray-400 hover:text-white transition-colors text-sm font-medium cursor-pointer"
+          className="inline-flex items-center space-x-2 text-text-muted hover:text-text-primary transition-colors text-sm font-medium cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
-          <span>Volver</span>
+          <span>{t('users:back')}</span>
         </button>
 
-        <div className="flex items-center space-x-2 text-xs text-gray-500 font-mono">
-          <span>User ID: #{user.id}</span>
+        <div className="flex items-center space-x-2 text-xs text-text-muted font-mono">
+          <span>{t('users:user_id')}: #{user.id}</span>
         </div>
       </div>
 
       {/* Main Profile Header Card */}
       <div className="glass-card p-6 sm:p-8 relative overflow-hidden shadow-2xl">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-duck-yellow/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-teal/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
 
         <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-6 sm:space-y-0 sm:space-x-8 relative z-10">
           {/* Avatar Icon */}
-          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-br from-duck-yellow to-teal p-1 shadow-lg flex-shrink-0">
-            <div className="w-full h-full bg-obsidian rounded-[22px] flex items-center justify-center font-bold text-2xl sm:text-3xl text-duck-yellow">
+          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-br from-teal/40 to-teal-dark p-1 shadow-lg flex-shrink-0 border border-teal/30">
+            <div className="w-full h-full bg-obsidian rounded-[22px] flex items-center justify-center font-bold text-2xl sm:text-3xl text-teal-glow">
               {getInitials(fullName)}
             </div>
           </div>
@@ -166,8 +172,8 @@ export default function UserDetailPage() {
           <div className="flex-1 text-center sm:text-left space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{fullName}</h1>
-                <p className="text-sm text-gray-400 font-mono">@{user.username}</p>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-text-primary tracking-tight">{fullName}</h1>
+                <p className="text-sm text-text-muted font-mono">@{user.username}</p>
               </div>
 
               {/* Role Badge */}
@@ -181,15 +187,15 @@ export default function UserDetailPage() {
 
             {/* Email Address with Copy Button */}
             {user.email && (
-              <div className="inline-flex items-center space-x-2 bg-obsidian/60 border border-border px-3.5 py-1.5 rounded-xl text-xs text-gray-300">
-                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="inline-flex items-center space-x-2 bg-obsidian/60 border border-border px-3.5 py-1.5 rounded-xl text-xs text-text-secondary">
+                <svg className="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
                 <span>{user.email}</span>
                 <button
                   onClick={() => handleCopyEmail(user.email)}
-                  title="Copiar email"
-                  className="text-gray-400 hover:text-duck-yellow transition-colors ml-1 cursor-pointer"
+                  title={copied ? t('users:copied') : t('users:copy_email')}
+                  className="text-text-muted hover:text-teal-glow transition-colors ml-1 cursor-pointer"
                 >
                   {copied ? (
                     <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -218,8 +224,8 @@ export default function UserDetailPage() {
               </svg>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">Área o Departamento</h2>
-              <p className="text-xs text-text-secondary">Áreas organizacionales asociadas a este usuario</p>
+              <h2 className="text-lg font-bold text-text-primary">{t('users:departments_title')}</h2>
+              <p className="text-xs text-text-secondary">{t('users:departments_subtitle')}</p>
             </div>
           </div>
 
@@ -228,19 +234,19 @@ export default function UserDetailPage() {
               {areas.map((area) => (
                 <div
                   key={area.id}
-                  className="bg-obsidian border border-border hover:border-duck-yellow/40 rounded-2xl p-4 transition-all duration-300 group"
+                  className="bg-obsidian border border-border hover:border-teal/40 rounded-2xl p-4 transition-all duration-300 group"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-xl bg-duck-yellow/10 group-hover:bg-duck-yellow/20 text-duck-yellow flex items-center justify-center transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-teal/10 group-hover:bg-teal/20 text-teal-glow flex items-center justify-center transition-colors">
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h2m-2 0V11m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14m-6 0h6" />
                       </svg>
                     </div>
                     <div>
-                      <h3 className="text-sm font-semibold text-white group-hover:text-duck-yellow transition-colors">
+                      <h3 className="text-sm font-semibold text-text-primary group-hover:text-teal-glow transition-colors">
                         {area.name}
                       </h3>
-                      <span className="text-[11px] text-text-muted">Área Asignada</span>
+                      <span className="text-[11px] text-text-muted">{t('users:assigned_area')}</span>
                     </div>
                   </div>
                 </div>
@@ -248,8 +254,8 @@ export default function UserDetailPage() {
             </div>
           ) : (
             <div className="text-center py-8 bg-obsidian/40 border border-dashed border-border rounded-2xl">
-              <p className="text-sm text-gray-400">Sin áreas asignadas</p>
-              <p className="text-xs text-gray-500 mt-1">Este usuario aún no tiene un departamento asignado.</p>
+              <p className="text-sm text-text-muted">{t('users:no_areas_title')}</p>
+              <p className="text-xs text-text-muted/80 mt-1">{t('users:no_areas_desc')}</p>
             </div>
           )}
         </div>
@@ -257,19 +263,19 @@ export default function UserDetailPage() {
         {/* Right Column: User Quick Stats (1 col) */}
         <div className="glass-card p-6 space-y-4 flex flex-col justify-between">
           <div className="border-b border-border/50 pb-4">
-            <h2 className="text-lg font-bold text-white">Estadísticas</h2>
-            <p className="text-xs text-text-secondary">Actividad de tickets del usuario</p>
+            <h2 className="text-lg font-bold text-text-primary">{t('users:stats_title')}</h2>
+            <p className="text-xs text-text-secondary">{t('users:stats_subtitle')}</p>
           </div>
 
           <div className="space-y-3">
             <div className="bg-obsidian border border-border rounded-2xl p-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <svg className="w-5 h-5 text-duck-yellow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 text-teal-glow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5z" />
                 </svg>
-                <span className="text-xs text-text-secondary font-medium">Tickets Creados</span>
+                <span className="text-xs text-text-secondary font-medium">{t('users:tickets_created')}</span>
               </div>
-              <span className="text-lg font-extrabold text-white">{createdTickets.length}</span>
+              <span className="text-lg font-extrabold text-text-primary">{createdTickets.length}</span>
             </div>
 
             {role === 'RESOLVER' && (
@@ -278,20 +284,20 @@ export default function UserDetailPage() {
                   <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a2 2 0 114 0v1a2 2 0 01-2 2H3a2 2 0 01-2-2V5a2 2 0 012-2h8v1zm-3 7h10M5 20h14a2 2 0 002-2v-5a2 2 0 00-2-2H5a2 2 0 00-2 2v5a2 2 0 002 2z" />
                   </svg>
-                  <span className="text-xs text-text-secondary font-medium">Tickets Asignados</span>
+                  <span className="text-xs text-text-secondary font-medium">{t('users:tickets_assigned')}</span>
                 </div>
-                <span className="text-lg font-extrabold text-white">{assignedTickets.length}</span>
+                <span className="text-lg font-extrabold text-text-primary">{assignedTickets.length}</span>
               </div>
             )}
 
             <div className="bg-obsidian border border-border rounded-2xl p-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 text-status-resolved" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="text-xs text-text-secondary font-medium">Resueltos</span>
+                <span className="text-xs text-text-secondary font-medium">{t('users:tickets_resolved')}</span>
               </div>
-              <span className="text-lg font-extrabold text-white">
+              <span className="text-lg font-extrabold text-text-primary">
                 {createdTickets.filter((t) => t.status === 'RESOLVED' || t.status === 'CLOSED').length}
               </span>
             </div>
@@ -303,8 +309,8 @@ export default function UserDetailPage() {
       <div className="glass-card p-6 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/50 pb-4">
           <div>
-            <h2 className="text-lg font-bold text-white">Tickets Relacionados</h2>
-            <p className="text-xs text-text-secondary">Historial de solicitudes asociadas a este perfil</p>
+            <h2 className="text-lg font-bold text-text-primary">{t('users:related_tickets_title')}</h2>
+            <p className="text-xs text-text-secondary">{t('users:related_tickets_subtitle')}</p>
           </div>
 
           {/* Filter Tabs */}
@@ -313,22 +319,22 @@ export default function UserDetailPage() {
               onClick={() => setActiveTab('created')}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'created'
-                  ? 'bg-duck-yellow text-obsidian font-bold shadow-md'
-                  : 'text-gray-400 hover:text-white'
+                  ? 'bg-teal text-white font-bold shadow-md'
+                  : 'text-text-muted hover:text-text-primary'
               }`}
             >
-              Creados ({createdTickets.length})
+              {t('users:tab_created')} ({createdTickets.length})
             </button>
             {role === 'RESOLVER' && (
               <button
                 onClick={() => setActiveTab('assigned')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   activeTab === 'assigned'
-                    ? 'bg-duck-yellow text-obsidian font-bold shadow-md'
-                    : 'text-gray-400 hover:text-white'
+                    ? 'bg-teal text-white font-bold shadow-md'
+                    : 'text-text-muted hover:text-text-primary'
                 }`}
               >
-                Asignados ({assignedTickets.length})
+                {t('users:tab_assigned')} ({assignedTickets.length})
               </button>
             )}
           </div>
@@ -345,45 +351,35 @@ export default function UserDetailPage() {
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs text-text-secondary">
-                    <span className="font-mono text-duck-yellow font-medium">#{ticket.id}</span>
+                    <span className="font-mono text-teal-glow font-medium">#{ticket.id.slice(0, 8)}</span>
                     <span className="inline-flex items-center space-x-1">
-                      <svg className="w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-3.5 h-3.5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      <span>{new Date(ticket.created_at).toLocaleDateString()}</span>
+                      <span>{formatDate(ticket.created_at)}</span>
                     </span>
                   </div>
-                  <h3 className="text-sm font-semibold text-white group-hover:text-teal-glow transition-colors line-clamp-1">
+                  <h3 className="text-sm font-semibold text-text-primary group-hover:text-teal-glow transition-colors line-clamp-1">
                     {ticket.title}
                   </h3>
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-xs">
                   <span className="text-text-secondary font-medium">
-                    Área: <span className="text-white">{ticket.source_area?.name || 'General'}</span>
+                    {t('users:area_label')}: <span className="text-text-primary">{ticket.source_area?.name || t('users:general_area')}</span>
                   </span>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full font-semibold text-[10px] ${
-                      ticket.status === 'RESOLVED' || ticket.status === 'CLOSED'
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        : ticket.status === 'IN_PROGRESS'
-                        ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                        : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                    }`}
-                  >
-                    {ticket.status}
-                  </span>
+                  <StatusBadge status={ticket.status} />
                 </div>
               </Link>
             ))}
           </div>
         ) : (
           <div className="text-center py-12 bg-obsidian/30 border border-dashed border-border rounded-2xl">
-            <svg className="w-10 h-10 text-gray-600 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-10 h-10 text-text-muted/40 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5z" />
             </svg>
-            <p className="text-sm text-gray-400 font-medium">No hay tickets en este historial</p>
-            <p className="text-xs text-gray-500 mt-1">Este usuario no tiene tickets registrados en esta sección.</p>
+            <p className="text-sm text-text-muted font-medium">{t('users:no_tickets_title')}</p>
+            <p className="text-xs text-text-muted/80 mt-1">{t('users:no_tickets_desc')}</p>
           </div>
         )}
       </div>

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import type { UserMinimal } from '../types';
 
 interface UserAvatarProps {
@@ -59,6 +60,7 @@ export default function UserAvatar({
   subtitle,
   clickable = true,
 }: UserAvatarProps) {
+  const { t } = useTranslation('common');
   if (!user) return null;
 
   const initials = getInitials(user);
@@ -73,7 +75,7 @@ export default function UserAvatar({
   }[size];
 
   const avatarContent = (
-    <div className={`inline-flex items-center gap-2 ${className}`} title={`Ver perfil de ${displayName}`}>
+    <div className={`inline-flex items-center gap-2 ${className}`} title={t('common:view_profile', { name: displayName })}>
       <div
         className={`${sizeClasses} rounded-full bg-gradient-to-br ${colorClass} border flex items-center justify-center font-bold shadow-sm select-none shrink-0 transition-transform group-hover:scale-105`}
       >

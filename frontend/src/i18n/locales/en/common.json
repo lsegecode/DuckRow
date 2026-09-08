@@ -40,6 +40,7 @@
     "es": "Español",
     "switch_language": "Language"
   },
+  "view_profile": "View profile of {{name}}",
   "date_picker": {
     "select_now": "Select Now",
     "done": "Done",
