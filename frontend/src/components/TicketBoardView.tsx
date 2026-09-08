@@ -7,7 +7,7 @@
  * - Valid transitions: OPEN → IN_PROGRESS → RESOLVED → CLOSED (forward only)
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -142,6 +142,19 @@ export default function TicketBoardView({ tickets, isLoading }: TicketBoardViewP
     },
   ];
 
+  // Ensure drag state is cleared if cancelled or dropped anywhere
+  useEffect(() => {
+    if (!draggingTicketId) return;
+    const handleGlobalDragEnd = () => {
+      setDraggingTicketId(null);
+      setDragOverColumn(null);
+    };
+    window.addEventListener('dragend', handleGlobalDragEnd);
+    return () => {
+      window.removeEventListener('dragend', handleGlobalDragEnd);
+    };
+  }, [draggingTicketId]);
+
   // ── Drag handlers ─────────────────────────────────────────────────────────
 
   const handleDragStart = (ticket: Ticket) => {
@@ -172,23 +185,35 @@ export default function TicketBoardView({ tickets, isLoading }: TicketBoardViewP
 
     if (hasValidTarget) {
       e.dataTransfer.dropEffect = 'move';
-      setDragOverColumn(columnId);
+      if (dragOverColumn !== columnId) {
+        setDragOverColumn(columnId);
+      }
     } else {
       e.dataTransfer.dropEffect = 'none';
-      setDragOverColumn(null);
+      if (dragOverColumn === columnId) {
+        setDragOverColumn(null);
+      }
     }
   };
 
-  const handleDragLeave = () => {
+  const handleDragLeave = (e: React.DragEvent) => {
+    // Prevent flickering: only clear when the pointer leaves the column boundaries entirely
+    const related = e.relatedTarget as Node | null;
+    if (related && e.currentTarget.contains(related)) {
+      return;
+    }
     setDragOverColumn(null);
   };
 
   const handleDrop = (e: React.DragEvent, columnId: ColumnId) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragOverColumn(null);
 
-    if (!draggingTicketId) return;
-    const draggingTicket = tickets.find((t) => t.id === draggingTicketId);
+    const ticketId = draggingTicketId || e.dataTransfer.getData('text/plain');
+    if (!ticketId) return;
+
+    const draggingTicket = tickets.find((t) => t.id === ticketId);
     if (!draggingTicket) return;
 
     const col = columns.find((c) => c.id === columnId);
@@ -252,58 +277,68 @@ export default function TicketBoardView({ tickets, isLoading }: TicketBoardViewP
               <div
                 key={column.id}
                 onDragOver={(e) => handleDragOver(e, column.id)}
+                onDragEnter={(e) => handleDragOver(e, column.id)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, column.id)}
                 className={[
-                  'flex flex-col bg-obsidian-light/60 border border-border rounded-2xl overflow-hidden shadow-lg backdrop-blur-sm min-h-[600px]',
+                  'flex flex-col bg-obsidian-light/60 border rounded-2xl overflow-hidden shadow-lg backdrop-blur-sm min-h-[600px] h-full',
                   'transition-all duration-200',
-                  isDragTarget ? `border-opacity-100 ${column.dropAccentClass}` : '',
+                  isDragTarget
+                    ? `${column.dropAccentClass} ring-2 ring-teal/40 bg-teal/[0.04]`
+                    : 'border-border',
                 ].join(' ')}
               >
                 {/* Column Header */}
-                <div className={`p-4 border-b border-border border-t-2 ${column.headerColor}`}>
+                <div className={`p-4 border-b border-border border-t-2 ${column.headerColor} transition-colors duration-200`}>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2.5 h-2.5 rounded-full ${column.indicatorColor} animate-pulse`} />
-                      <h2 className="font-bold text-sm text-text-primary tracking-wide uppercase">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={`w-2.5 h-2.5 rounded-full ${column.indicatorColor} ${isDragTarget ? 'scale-125 animate-ping' : 'animate-pulse'}`} />
+                      <h2 className="font-bold text-sm text-text-primary tracking-wide uppercase truncate">
                         {column.title}
                       </h2>
+                      {isDragTarget && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal/20 text-teal-glow border border-teal/40 animate-pulse tracking-wider shrink-0">
+                          ⬇ {t('board.drop_here')}
+                        </span>
+                      )}
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full bg-surface border border-border text-xs font-bold text-text-primary shadow-inner">
+                    <span className="px-2.5 py-0.5 rounded-full bg-surface border border-border text-xs font-bold text-text-primary shadow-inner shrink-0">
                       {column.badgeText}
                     </span>
                   </div>
                   <p className="text-[11px] text-text-muted mt-1">{column.breakdownText}</p>
                 </div>
 
-                {/* Drop hint banner */}
-                {isDragTarget && (
-                  <div className="mx-3 mt-3 px-3 py-2 rounded-xl border border-dashed border-current/40 text-[11px] font-semibold text-center animate-fade-in"
-                    style={{ color: 'var(--color-teal-glow)', background: 'rgba(13,92,77,0.08)' }}>
-                    ⬇ {t('board.drop_here')}
-                  </div>
-                )}
-
                 {/* Column Body / Cards List */}
-                <div className="p-3 space-y-3 flex-1 overflow-y-auto max-h-[calc(100vh-280px)]">
+                <div className="p-3 space-y-3 flex-1 overflow-y-auto max-h-[calc(100vh-280px)] min-h-[420px]">
                   {column.tickets.length > 0 ? (
-                    column.tickets.map((ticket) => (
-                      <TicketBoardCard
-                        key={ticket.id}
-                        ticket={ticket}
-                        columnType={column.id}
-                        isDragging={draggingTicketId === ticket.id}
-                        onDragStart={() => handleDragStart(ticket)}
-                        onDragEnd={handleDragEnd}
-                      />
-                    ))
+                    <>
+                      {column.tickets.map((ticket) => (
+                        <TicketBoardCard
+                          key={ticket.id}
+                          ticket={ticket}
+                          columnType={column.id}
+                          isDragging={draggingTicketId === ticket.id}
+                          isAnyDragging={!!draggingTicketId}
+                          onDragStart={() => handleDragStart(ticket)}
+                          onDragEnd={handleDragEnd}
+                        />
+                      ))}
+                      {isDragTarget && (
+                        <div className="border-2 border-dashed border-teal/50 bg-teal/5 rounded-xl p-4 text-center text-xs font-semibold text-teal-glow transition-all animate-fade-in flex items-center justify-center gap-2">
+                          <span className="text-base">⬇</span> {t('board.drop_here')}
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className={[
-                      'flex flex-col items-center justify-center py-16 text-center text-text-muted border-2 border-dashed rounded-xl m-2 transition-all duration-200',
-                      isDragTarget ? 'border-teal/40 bg-teal/5' : 'border-border/40',
+                      'flex flex-col items-center justify-center py-16 text-center text-text-muted border-2 border-dashed rounded-xl m-2 transition-all duration-200 min-h-[250px]',
+                      isDragTarget ? 'border-teal/60 bg-teal/10 text-teal-glow scale-[1.02]' : 'border-border/40',
                     ].join(' ')}>
-                      <span className="text-2xl mb-2 opacity-50">🦆</span>
-                      <p className="text-xs font-medium">{t('board.empty_column')}</p>
+                      <span className="text-3xl mb-2">🦆</span>
+                      <p className="text-xs font-semibold">
+                        {isDragTarget ? t('board.drop_here') : t('board.empty_column')}
+                      </p>
                     </div>
                   )}
                 </div>

@@ -14,6 +14,7 @@ interface TicketBoardCardProps {
   ticket: Ticket;
   columnType: 'QUEUE' | 'IN_PROGRESS' | 'DONE';
   isDragging?: boolean;
+  isAnyDragging?: boolean;
   onDragStart?: () => void;
   onDragEnd?: () => void;
 }
@@ -22,6 +23,7 @@ export default function TicketBoardCard({
   ticket,
   columnType,
   isDragging = false,
+  isAnyDragging = false,
   onDragStart,
   onDragEnd,
 }: TicketBoardCardProps) {
@@ -112,12 +114,17 @@ export default function TicketBoardCard({
         onDragStart?.();
       }}
       onDragEnd={onDragEnd}
+      onDragOver={(e) => {
+        // Allow drop events to reach column seamlessly
+        e.preventDefault();
+      }}
       className={[
         'glass-card p-4 rounded-xl border border-border hover:border-teal/50',
         'transition-all duration-[var(--transition-fast)] shadow-md hover:shadow-[var(--shadow-glow-teal)]',
         'flex flex-col justify-between group space-y-3 bg-obsidian-light/80 backdrop-blur-md',
         isStaff ? 'cursor-grab active:cursor-grabbing select-none' : '',
         isDragging ? 'opacity-40 scale-95 rotate-1 shadow-2xl border-teal/30' : '',
+        !isDragging && isAnyDragging ? 'pointer-events-none' : '',
       ].join(' ')}
     >
       {/* Top Header: Type, ID, Urgency & Internal Priority */}
@@ -135,7 +142,7 @@ export default function TicketBoardCard({
 
             {/* Internal Priority (Staff only) */}
             {isStaff && (
-              <div className="relative flex items-center">
+              <div className="relative flex items-center" onMouseDown={(e) => e.stopPropagation()}>
                 {isChangingPriority ? (
                   <select
                     autoFocus
@@ -152,6 +159,7 @@ export default function TicketBoardCard({
                 ) : (
                   <button
                     type="button"
+                    draggable={false}
                     onClick={() => setIsChangingPriority(true)}
                     title={t('board.action_priority')}
                     className="cursor-pointer hover:scale-105 transition-transform flex items-center justify-center p-0 m-0 border-0 bg-transparent outline-none leading-none"
@@ -173,6 +181,7 @@ export default function TicketBoardCard({
         {/* Title */}
         <Link
           to={`/tickets/${ticket.id}`}
+          draggable={false}
           className="text-sm font-semibold text-text-primary group-hover:text-teal-glow transition-colors line-clamp-2 leading-snug"
         >
           {ticket.title}
@@ -203,9 +212,10 @@ export default function TicketBoardCard({
 
         {/* Quick Action Buttons for Resolvers and Sysadmins */}
         {isStaff && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1" onMouseDown={(e) => e.stopPropagation()}>
             {columnType === 'QUEUE' && !isAssigned && (
               <button
+                draggable={false}
                 onClick={() => claimMutation.mutate()}
                 disabled={claimMutation.isPending}
                 className="px-2 py-1 bg-teal/20 hover:bg-teal/35 text-teal-glow rounded-lg text-[10px] font-semibold border border-teal/30 transition-all hover:scale-105 active:scale-95"
@@ -217,6 +227,7 @@ export default function TicketBoardCard({
 
             {columnType === 'QUEUE' && isAssigned && (
               <button
+                draggable={false}
                 onClick={() => handleStatusTransition('IN_PROGRESS')}
                 disabled={updateMutation.isPending}
                 className="px-2 py-1 bg-status-in-progress/20 hover:bg-status-in-progress/35 text-status-in-progress rounded-lg text-[10px] font-semibold border border-status-in-progress/30 transition-all hover:scale-105 active:scale-95"
@@ -228,6 +239,7 @@ export default function TicketBoardCard({
 
             {columnType === 'IN_PROGRESS' && (
               <button
+                draggable={false}
                 onClick={() => handleStatusTransition('RESOLVED')}
                 disabled={updateMutation.isPending}
                 className="px-2 py-1 bg-status-resolved/20 hover:bg-status-resolved/35 text-status-resolved rounded-lg text-[10px] font-semibold border border-status-resolved/30 transition-all hover:scale-105 active:scale-95"
@@ -239,6 +251,7 @@ export default function TicketBoardCard({
 
             {columnType === 'DONE' && ticket.status === 'RESOLVED' && (
               <button
+                draggable={false}
                 onClick={() => handleStatusTransition('CLOSED')}
                 disabled={updateMutation.isPending}
                 className="px-2 py-1 bg-surface hover:bg-surface-hover text-text-secondary hover:text-text-primary rounded-lg text-[10px] font-semibold border border-border transition-all hover:scale-105 active:scale-95"
