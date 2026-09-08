@@ -47,7 +47,12 @@ Una moderna aplicación de gestión de tickets y tareas de soporte de alto contr
 
 ---
 
-## 🚀 Configuración y Ejecución
+## 🚀 Guías de Configuración y Despliegue
+ 
+- ☁️ **Producción Cloud ($0/mes Serverless & PaaS)**: 👉 **[Guía de Arquitectura y Despliegue Cloud (Cloudflare Pages, Koyeb, Neon.tech)](documentation/es/cloud_deployment_guide.md)**
+- 📦 **Autohospedado On-Premise**: 👉 **[Guía de Despliegue en Proxmox LXC y Docker](documentation/proxmox_lxc_deployment.md)**
+ 
+ Para desarrollo local en bare-metal, sigue las secciones a continuación:
 
 ### 1. Configuración del Backend
 1. Abre una terminal en la carpeta raíz del proyecto.

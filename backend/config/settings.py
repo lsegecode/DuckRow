@@ -8,6 +8,10 @@ Customized for DuckRow ticket management system.
 import os
 from pathlib import Path
 from datetime import timedelta
+try:
+    import dj_database_url
+except ImportError:
+    dj_database_url = None
 from django.utils.translation import gettext_lazy as _
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -32,7 +36,8 @@ SECRET_KEY = raw_secret.strip("'\"").strip() if raw_secret else raw_secret
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
 
-ALLOWED_HOSTS = ['*']
+raw_allowed_hosts = os.getenv('ALLOWED_HOSTS', '*')
+ALLOWED_HOSTS = [h.strip() for h in raw_allowed_hosts.split(',') if h.strip()] if raw_allowed_hosts != '*' else ['*']
 
 
 # ---------------------------------------------------------------------------
@@ -59,6 +64,14 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+]
+try:
+    import whitenoise
+    MIDDLEWARE.append('whitenoise.middleware.WhiteNoiseMiddleware')
+except ImportError:
+    pass
+
+MIDDLEWARE.extend([
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
@@ -67,7 +80,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-]
+])
 
 ROOT_URLCONF = 'config.urls'
 
@@ -90,12 +103,36 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # ---------------------------------------------------------------------------
-# Database — Dynamic: SQLite by default, Microsoft SQL Server in prod
+# Database — Dynamic: Neon.tech PostgreSQL Serverless, MSSQL, or SQLite
 # ---------------------------------------------------------------------------
 
-DB_ENGINE = os.getenv('DB_ENGINE', 'sqlite').lower()
+DATABASE_URL = os.getenv('DATABASE_URL')
+DB_ENGINE = os.getenv('DB_ENGINE', '').lower()
 
-if DB_ENGINE in ('mssql', 'sqlserver', 'sql_server'):
+if DATABASE_URL and dj_database_url:
+    # 1. Primary Cloud Engine: Neon.tech Serverless PostgreSQL or PaaS DATABASE_URL
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+            ssl_require=True if ('neon.tech' in DATABASE_URL or 'sslmode=require' in DATABASE_URL) else False,
+        )
+    }
+elif DB_ENGINE in ('postgres', 'postgresql', 'pgsql'):
+    # 2. Local Docker PostgreSQL
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'duckrow'),
+            'USER': os.getenv('DB_USER', 'postgres'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'postgres'),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+        }
+    }
+elif DB_ENGINE in ('mssql', 'sqlserver', 'sql_server'):
+    # 3. Microsoft SQL Server
     db_schema = os.getenv('DB_SCHEMA', 'tic')
     DATABASES = {
         'default': {
@@ -113,6 +150,7 @@ if DB_ENGINE in ('mssql', 'sqlserver', 'sql_server'):
         }
     }
 else:
+    # 4. Default Bare-Metal Development: Local SQLite
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -164,10 +202,26 @@ LOCALE_PATHS = [
 
 
 # ---------------------------------------------------------------------------
-# Static files (CSS, JavaScript, Images)
+# Static files (WhiteNoise) & Media Uploads
 # ---------------------------------------------------------------------------
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+try:
+    import whitenoise
+    staticfiles_backend = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+except ImportError:
+    staticfiles_backend = "django.contrib.staticfiles.storage.StaticFilesStorage"
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": staticfiles_backend,
+    },
+}
 
 MEDIA_URL = '/media/'
 raw_media_root = os.getenv('MEDIA_ROOT', '')
@@ -225,11 +279,23 @@ SIMPLE_JWT = {
 
 
 # ---------------------------------------------------------------------------
-# CORS — allow Vite dev server
+# CORS, CSRF & Reverse Proxy SSL (Cloudflare / Koyeb)
 # ---------------------------------------------------------------------------
 
-CORS_ALLOW_ALL_ORIGINS = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'True').lower() in ('true', '1', 't')
 CORS_ALLOW_CREDENTIALS = True
+
+raw_cors = os.getenv('CORS_ALLOWED_ORIGINS', '')
+if raw_cors:
+    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in raw_cors.split(',') if origin.strip()]
+
+raw_csrf = os.getenv(
+    'CSRF_TRUSTED_ORIGINS',
+    'https://duckrow.lucassanabria.com,https://api.duckrow.lucassanabria.com,http://localhost:5173,http://localhost:80'
+)
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in raw_csrf.split(',') if origin.strip()]
 
 
 # ---------------------------------------------------------------------------

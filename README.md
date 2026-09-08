@@ -45,10 +45,12 @@ A modern, high-contrast, ticket-based task management application with a role-ba
 
 *Note: For CLIENT users, internal fields like `internal_priority` and `assigned_to` are stripped out of the API serializers completely.*
 
-## 🚀 Setup & Execution
+## 🚀 Setup & Deployment Guides
 
-For bare-metal local development, follow the sections below. For production deployment in a **Proxmox LXC container (Docker Compose)** and ongoing update workflows, refer to the dedicated guide:
-👉 **[Proxmox LXC Deployment & Update Guide](documentation/proxmox_lxc_deployment.md)**
+- ☁️ **Production Cloud ($0/mo Serverless & PaaS)**: 👉 **[Cloud Architecture & Deployment Guide (Cloudflare Pages, Koyeb, Neon.tech)](documentation/cloud_deployment_guide.md)**
+- 📦 **Self-Hosted On-Premise**: 👉 **[Proxmox LXC & Docker Deployment Guide](documentation/proxmox_lxc_deployment.md)**
+
+For bare-metal local development, follow the sections below:
 
 ### 1. Backend Setup
 1. Open a terminal in the root folder of the project.
