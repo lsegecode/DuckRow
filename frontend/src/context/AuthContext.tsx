@@ -13,6 +13,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../api/auth';
 import type { CurrentUser, LoginCredentials, Role } from '../types';
 
@@ -65,11 +66,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const queryClient = useQueryClient();
+
   useEffect(() => {
     fetchUser();
   }, [fetchUser]);
 
   const login = async (credentials: LoginCredentials) => {
+    // Evict existing query caches immediately when switching users
+    queryClient.clear();
     const tokens = await authApi.login(credentials);
     localStorage.setItem('access_token', tokens.access);
     localStorage.setItem('refresh_token', tokens.refresh);
@@ -80,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     setUser(null);
+    queryClient.clear();
   };
 
   const refreshUser = async () => {

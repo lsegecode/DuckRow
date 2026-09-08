@@ -23,7 +23,7 @@ import type { Ticket } from '../types';
 const PAGE_SIZE = 10;
 
 export default function BacklogPage() {
-  const { role } = useAuth();
+  const { user, role } = useAuth();
   const { t } = useTranslation(['backlog', 'common', 'tickets']);
 
   // Filters
@@ -49,16 +49,16 @@ export default function BacklogPage() {
 
   // Fetch areas (for RESOLVER / SYSADMIN area filter)
   const { data: areas } = useQuery({
-    queryKey: ['areas'],
+    queryKey: ['areas', user?.id],
     queryFn: usersApi.getAreas,
-    enabled: role === 'RESOLVER' || role === 'SYSADMIN',
+    enabled: !!user && (role === 'RESOLVER' || role === 'SYSADMIN'),
   });
 
   // Fetch resolvers (SYSADMIN only)
   const { data: resolvers } = useQuery({
-    queryKey: ['resolvers'],
+    queryKey: ['resolvers', user?.id],
     queryFn: usersApi.getResolvers,
-    enabled: role === 'SYSADMIN',
+    enabled: !!user && role === 'SYSADMIN',
   });
 
   // Fetch backlog tickets — always RESOLVED + CLOSED
@@ -71,6 +71,7 @@ export default function BacklogPage() {
   const { data: ticketsData, isLoading, isError } = useQuery({
     queryKey: [
       'backlog',
+      user?.id,
       { typeFilter, dateFrom, dateTo, areaFilter, resolverFilter, ordering, page },
     ],
     queryFn: () =>
@@ -85,6 +86,7 @@ export default function BacklogPage() {
         page,
         page_size: PAGE_SIZE,
       }),
+    enabled: !!user,
   });
 
   const tickets = ticketsData?.results ?? [];

@@ -13,7 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../utils/dateUtils';
 
 export default function TicketListPage() {
-  const { role } = useAuth();
+  const { user, role } = useAuth();
   const { t } = useTranslation(['tickets', 'common']);
   const [searchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
@@ -42,7 +42,7 @@ export default function TicketListPage() {
 
   // Fetch areas for filtering
   const { data: areas } = useQuery({
-    queryKey: ['areas'],
+    queryKey: ['areas', user?.id],
     queryFn: usersApi.getAreas,
   });
 
@@ -52,6 +52,7 @@ export default function TicketListPage() {
   const { data: ticketsData, isLoading, isError } = useQuery({
     queryKey: [
       'tickets',
+      user?.id,
       { ticket_type: typeFilter, status: statusFilter, urgency: urgencyFilter, area: areaFilter, search, ordering, page, viewMode, historyMode },
     ],
     queryFn: () =>
@@ -68,6 +69,7 @@ export default function TicketListPage() {
         // Apply week filter in board mode always; in list mode only when not in history mode
         created_after: (viewMode === 'board' || !historyMode) ? sevenDaysAgo : undefined,
       }),
+    enabled: !!user,
   });
 
   const handleResetFilters = () => {

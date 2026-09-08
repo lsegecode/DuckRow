@@ -20,13 +20,15 @@ export default function DashboardPage() {
   const [activeStatusFilter, setActiveStatusFilter] = useState<string>('');
 
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['ticket-stats'],
+    queryKey: ['ticket-stats', user?.id],
     queryFn: ticketsApi.stats,
+    enabled: !!user,
   });
 
   const { data: ticketsData, isLoading: ticketsLoading } = useQuery({
-    queryKey: ['tickets', { page: 1, status: activeStatusFilter }],
+    queryKey: ['tickets', user?.id, { page: 1, status: activeStatusFilter }],
     queryFn: () => ticketsApi.list({ page: 1, status: activeStatusFilter || undefined }),
+    enabled: !!user,
   });
 
   const greeting = getGreeting(t);

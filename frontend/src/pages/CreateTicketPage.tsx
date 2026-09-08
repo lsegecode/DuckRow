@@ -44,6 +44,9 @@ export default function CreateTicketPage() {
   const [useCase, setUseCase] = useState('');
   const [featureDetails, setFeatureDetails] = useState('');
 
+  // Confirmation on step 4
+  const [hasConfirmedReview, setHasConfirmedReview] = useState(false);
+
   // Attached screenshots / images
   const [images, setImages] = useState<ImageAttachmentPreview[]>([]);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -156,7 +159,9 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
   const handleNextStep = () => {
     if (step === 1 && !isStep1Valid) return;
     if (step === 2 && !isStep2Valid) return;
-    setStep((prev) => prev + 1);
+    if (step < 4) {
+      setStep((prev) => prev + 1);
+    }
   };
 
   const handlePrevStep = () => {
@@ -169,6 +174,7 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
       handleNextStep();
       return;
     }
+    if (!hasConfirmedReview) return;
     if (createTicketMutation.isPending) return;
 
     createTicketMutation.mutate({
@@ -323,7 +329,7 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
                 {/* Department Selector */}
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-2">
-                    {t('tickets:wizard.select_dept_label')}
+                    {t('tickets:wizard.select_dept_label')} <span className="text-rose-400 font-bold">*</span>
                   </label>
                   {areasLoading ? (
                     <div className="h-11 bg-obsidian border border-border rounded-xl animate-pulse" />
@@ -346,9 +352,14 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
 
                 {/* Title */}
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-2">
-                    {t('tickets:wizard.title_label')}
-                  </label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-text-secondary">
+                      {t('tickets:wizard.title_label')} <span className="text-rose-400 font-bold">*</span>
+                    </label>
+                    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                      {t('tickets:wizard.required_badge')}
+                    </span>
+                  </div>
                   <input
                     type="text"
                     required
@@ -389,9 +400,14 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
                 {ticketType === 'BUG' ? (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-text-secondary mb-1">
-                        {t('tickets:wizard.expected_label')}
-                      </label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-sm font-medium text-text-secondary">
+                          {t('tickets:wizard.expected_label')} <span className="text-rose-400 font-bold">*</span>
+                        </label>
+                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                          {t('tickets:wizard.required_badge')}
+                        </span>
+                      </div>
                       <textarea
                         required
                         rows={3}
@@ -403,9 +419,14 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-text-secondary mb-1">
-                        {t('tickets:wizard.actual_label')}
-                      </label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-sm font-medium text-text-secondary">
+                          {t('tickets:wizard.actual_label')} <span className="text-rose-400 font-bold">*</span>
+                        </label>
+                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                          {t('tickets:wizard.required_badge')}
+                        </span>
+                      </div>
                       <textarea
                         required
                         rows={3}
@@ -417,9 +438,14 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-text-secondary mb-1">
-                        {t('tickets:wizard.tried_label')}
-                      </label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-sm font-medium text-text-secondary">
+                          {t('tickets:wizard.tried_label')}
+                        </label>
+                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-surface/80 text-text-muted border border-border">
+                          {t('tickets:wizard.optional_badge')}
+                        </span>
+                      </div>
                       <textarea
                         rows={2}
                         placeholder={t('tickets:wizard.tried_placeholder')}
@@ -432,9 +458,14 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
                 ) : (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-text-secondary mb-1">
-                        {t('tickets:wizard.goal_label')}
-                      </label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-sm font-medium text-text-secondary">
+                          {t('tickets:wizard.goal_label')} <span className="text-rose-400 font-bold">*</span>
+                        </label>
+                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                          {t('tickets:wizard.required_badge')}
+                        </span>
+                      </div>
                       <textarea
                         required
                         rows={3}
@@ -446,9 +477,14 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-text-secondary mb-1">
-                        {t('tickets:wizard.use_case_label')}
-                      </label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-sm font-medium text-text-secondary">
+                          {t('tickets:wizard.use_case_label')} <span className="text-rose-400 font-bold">*</span>
+                        </label>
+                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                          {t('tickets:wizard.required_badge')}
+                        </span>
+                      </div>
                       <textarea
                         required
                         rows={3}
@@ -460,9 +496,14 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-text-secondary mb-1">
-                        {t('tickets:wizard.feature_details_label')}
-                      </label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-sm font-medium text-text-secondary">
+                          {t('tickets:wizard.feature_details_label')}
+                        </label>
+                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-surface/80 text-text-muted border border-border">
+                          {t('tickets:wizard.optional_badge')}
+                        </span>
+                      </div>
                       <textarea
                         rows={2}
                         placeholder={t('tickets:wizard.feature_details_placeholder')}
@@ -659,6 +700,27 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
                     </div>
                   )}
                 </div>
+
+                {/* Explicit confirmation checkpoint */}
+                <div className="p-4 rounded-xl border border-teal/30 bg-teal/5">
+                  <h4 className="text-sm font-semibold text-text-primary mb-1">
+                    {t('tickets:wizard.confirm_submit_heading')}
+                  </h4>
+                  <p className="text-xs text-text-secondary mb-3">
+                    {t('tickets:wizard.confirm_submit_desc')}
+                  </p>
+                  <label className="flex items-center gap-3 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={hasConfirmedReview}
+                      onChange={(e) => setHasConfirmedReview(e.target.checked)}
+                      className="w-4 h-4 rounded border-border text-teal focus:ring-teal/30 bg-obsidian cursor-pointer"
+                    />
+                    <span className="text-xs text-text-primary font-medium">
+                      {t('tickets:wizard.confirm_checkbox_label')}
+                    </span>
+                  </label>
+                </div>
               </div>
             )}
 
@@ -695,10 +757,12 @@ ${featureDetails.trim() ? `\n${t('tickets:wizard.feature_details_md_header')}\n$
               ) : (
                 <button
                   type="submit"
-                  disabled={createTicketMutation.isPending}
-                  className="px-6 py-2.5 bg-teal hover:bg-teal-light text-white font-semibold rounded-xl transition-all disabled:opacity-40 hover:shadow-[var(--shadow-glow-teal)]"
+                  disabled={!hasConfirmedReview || createTicketMutation.isPending}
+                  className="px-6 py-2.5 bg-teal hover:bg-teal-light text-white font-semibold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-[var(--shadow-glow-teal)]"
                 >
-                  {createTicketMutation.isPending ? t('common:actions.submitting') : t('tickets:create_ticket')}
+                  {createTicketMutation.isPending
+                    ? t('common:actions.submitting')
+                    : t('tickets:wizard.submit_ticket_button')}
                 </button>
               )}
             </div>
