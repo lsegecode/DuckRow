@@ -7,9 +7,9 @@
 
 import axios from 'axios';
 
-const rawApiUrl = import.meta.env.VITE_API_URL || '';
+const rawApiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 const API_BASE_URL = rawApiUrl
-  ? `${rawApiUrl.replace(/\/+$/, '')}/api/v1`
+  ? (rawApiUrl.endsWith('/api/v1') ? rawApiUrl : `${rawApiUrl}/api/v1`)
   : '/api/v1';
 
 const client = axios.create({
