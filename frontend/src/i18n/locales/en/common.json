@@ -44,6 +44,11 @@
     "select_now": "Select Now",
     "done": "Done",
     "hour": "H:",
-    "minute": "M:"
+    "minute": "M:",
+    "date_tab": "Date",
+    "time_tab": "Time",
+    "change_time": "Set Time →",
+    "back_to_date": "← Back to Date",
+    "time_header": "Hour (24h)"
   }
 }
