@@ -150,6 +150,7 @@ activemq-data/
 # Environments & Secrets
 .env
 .env.*
+!.env.example
 .env.local
 role_overrides.json
 role_overrides.*.json

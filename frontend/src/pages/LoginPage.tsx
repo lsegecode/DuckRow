@@ -27,7 +27,7 @@ export default function LoginPage() {
     if (ssoError) {
       switch (ssoError) {
         case 'token_expired':
-          setError('El enlace SSO ha expirado (máximo 120s). Vuelve a intentar desde el Portal EME.');
+          setError('El enlace SSO ha expirado (máximo 120s). Vuelve a intentar desde el portal de acceso.');
           break;
         case 'token_invalid':
           setError('El token SSO es inválido o la firma de autenticación no coincide.');

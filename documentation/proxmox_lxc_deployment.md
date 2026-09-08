@@ -1,6 +1,6 @@
 # 📦 Proxmox LXC Deployment & Update Guide (DuckRow)
 
-This guide documents the complete end-to-end procedure for deploying **DuckRow** into a Proxmox LXC container (running Docker & Docker Compose), connecting it to Microsoft SQL Server (`EmeWebAuth`), and managing code updates seamlessly without losing database records or configuration files.
+This guide documents the complete end-to-end procedure for deploying **DuckRow** into a Proxmox LXC container (running Docker & Docker Compose), connecting it to Microsoft SQL Server (`DuckRowDB`), and managing code updates seamlessly without losing database records or configuration files.
 
 ---
 
@@ -25,7 +25,7 @@ DuckRow in production runs as a multi-container Docker Compose service inside a 
   - Reverse proxies `/api/`, `/media/`, and `/sso/` directly to the backend container (`backend:8000`).
 - **Backend Container (`backend`)**:
   - Python 3.12 (Debian slim) running **Django REST Framework** managed by **Gunicorn** on port `8000`.
-  - Includes official Microsoft ODBC Drivers 17 & 18 (`msodbcsql17`, `msodbcsql18`) to communicate with SQL Server (`EmeWebAuth`).
+  - Includes official Microsoft ODBC Drivers 17 & 18 (`msodbcsql17`, `msodbcsql18`) to communicate with SQL Server (`DuckRowDB`).
   - Automatically runs database migrations on startup.
 - **Persistence**:
   - `./backend/db.sqlite3` is mounted directly if using SQLite.
@@ -45,7 +45,7 @@ When creating the LXC container in Proxmox VE:
 | **RAM** | 2048 MB (2 GB) + 1 GB Swap | Recommended for Vite build step |
 | **Disk** | 15 GB+ | Enough for Docker images & layers |
 | **Features / Nesting** | **Nesting: Enabled**, **keyctl: Enabled** | **CRITICAL**: Required for Docker in LXC |
-| **Network** | Static IP (e.g. `192.168.0.199/24`) with Gateway | Accessible in local LAN |
+| **Network** | Static IP (e.g. `10.0.0.150/24`) with Gateway | Accessible in local LAN |
 
 > [!IMPORTANT]
 > In Proxmox VE web GUI, go to your container: **Options -> Features -> Edit -> Check "Nesting" and "keyctl"**. Without nesting, Docker daemon will fail to start inside LXC.
@@ -94,7 +94,7 @@ cd /root/DuckRow
 
 ## ⚙️ Environment Configuration (`backend/.env`)
 
-The backend requires environment variables to connect to Microsoft SQL Server (`EmeWebAuth`), handle SSO tokens, and dispatch Teams webhook notifications.
+The backend requires environment variables to connect to Microsoft SQL Server (`DuckRowDB`), handle SSO tokens, and dispatch Teams webhook notifications.
 
 Create or edit `/root/DuckRow/backend/.env`:
 
@@ -110,24 +110,24 @@ SECRET_KEY=django-insecure-*-*vs4z#2b-qzwp=j!qwucji$9s70!#+rjqm@o97ea=mwr6z81
 DEBUG=False
 
 # Frontend URL (Must be the container's IP/domain on port 80 without port 5173)
-FRONTEND_URL=http://192.168.0.199
+FRONTEND_URL=http://10.0.0.150
 
-# Database Configuration (Microsoft SQL Server -> EmeWebAuth schema tic)
+# Database Configuration (Microsoft SQL Server -> DuckRowDB schema tic)
 DB_ENGINE=mssql
-DB_NAME=EmeWebAuth
+DB_NAME=DuckRowDB
 DB_USER=duckrow_app
 DB_PASSWORD=YourDatabasePasswordHere!
-DB_HOST=192.168.0.11
+DB_HOST=10.0.0.10
 DB_PORT=1433
 DB_SCHEMA=tic
 DB_DRIVER=ODBC Driver 17 for SQL Server
 DB_EXTRA_PARAMS=TrustServerCertificate=yes;
 
-# Single Sign-On (SSO) with Home-Web EME Portal
+# Single Sign-On (SSO) with Central SSO Portal
 HOME_WEB_SSO_SALT=duckrow-sso-auth
 
 # Microsoft Teams Workflows Webhook URL (Power Automate)
-TEAMS_WEBHOOK_URL=https://defaultd9e9780a43d0419c896b429a5f6669.46.environment.api.powerplatform.com:443/powerautomate/...
+TEAMS_WEBHOOK_URL=https://your-org.environment.api.powerplatform.com/powerautomate/...
 ```
 
 > [!WARNING]
@@ -163,7 +163,7 @@ docker compose up -d --build
 
 Now access DuckRow in your browser:
 ```text
-http://192.168.0.199/
+http://10.0.0.150/
 ```
 
 ---
@@ -265,13 +265,13 @@ docker compose up -d --build
 
 ### 1. SSO Redirects to Port 5173 Instead of 80
 - **Cause**: `FRONTEND_URL` in `backend/.env` still contains `:5173` or has duplicate entries.
-- **Fix**: Edit `backend/.env`, set `FRONTEND_URL=http://<LXC_IP>` (e.g. `http://192.168.0.199`), and restart backend:
+- **Fix**: Edit `backend/.env`, set `FRONTEND_URL=http://<LXC_IP>` (e.g. `http://10.0.0.150`), and restart backend:
   ```bash
   docker compose restart backend
   ```
 
 ### 2. Zero Tickets Shown / Database Connection Fails
-- **Cause**: Missing ODBC driver or network unreachable to `192.168.0.11:1433`.
+- **Cause**: Missing ODBC driver or network unreachable to `10.0.0.10:1433`.
 - **Diagnosis**: Run `docker compose logs backend` to inspect connection errors. Test connectivity from inside container:
   ```bash
   docker compose exec backend python -c "import pyodbc; print(pyodbc.drivers())"

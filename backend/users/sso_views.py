@@ -61,7 +61,7 @@ def get_override_role(username: str, default_role: str) -> str:
 
 def sso_exchange_view(request):
     """
-    Receives an SSO token signed by home-web, verifies signature and max age (120s),
+    Receives an SSO token signed by the SSO portal, verifies signature and max age (120s),
     retrieves or creates the user in DuckRow, updates roles, assigns areas/departments,
     generates SimpleJWT access/refresh tokens, and redirects to the frontend callback.
     """
@@ -132,7 +132,7 @@ def sso_exchange_view(request):
     if hasattr(user, 'profile'):
         profile = user.profile
         
-        # Determine default role from home-web payload
+        # Determine default role from SSO payload
         if user.is_superuser or 'SYSADMIN' in rol_home or 'SUPERUSER' in rol_home:
             default_role = 'SYSADMIN'
         elif any(k in rol_home for k in ['ADMIN', 'SISTEMAS', 'SOPORTE', 'RESOLVER', 'TECNICO', 'DEV', 'IT']):
@@ -173,7 +173,7 @@ def sso_exchange_view(request):
 
         profile.save()
 
-        # Collect target area names specified in home-web payload
+        # Collect target area names specified in SSO payload
         target_area_names = set()
         print(f"[SSO INFO] Authenticating user '{user.username}' with SSO payload: {payload}")
 

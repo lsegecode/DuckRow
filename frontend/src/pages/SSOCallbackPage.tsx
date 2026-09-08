@@ -66,7 +66,7 @@ export default function SSOCallbackPage() {
             <div className="w-16 h-16 mx-auto rounded-full bg-teal/15 flex items-center justify-center animate-float border border-teal/20 p-2 overflow-hidden">
               <img src="/static/duckie.png" alt="Duckie Mascot" className="w-full h-full object-contain" />
             </div>
-            <h2 className="text-lg font-bold text-text-primary">Iniciando sesión desde Portal EME...</h2>
+            <h2 className="text-lg font-bold text-text-primary">Iniciando sesión vía Portal SSO...</h2>
             <div className="flex justify-center items-center gap-2 pt-2">
               <span className="w-4 h-4 border-2 border-teal border-t-transparent rounded-full animate-spin" />
               <span className="text-xs text-text-muted">Validando credenciales...</span>
