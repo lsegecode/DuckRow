@@ -7,7 +7,10 @@
 
 import axios from 'axios';
 
-const rawApiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+// In production (Cloudflare static asset worker), default directly to Render backend if env is missing
+const defaultProductionApi = 'https://duckrow-api.onrender.com';
+const envApiUrl = import.meta.env.VITE_API_URL;
+const rawApiUrl = (envApiUrl || (import.meta.env.PROD ? defaultProductionApi : '')).replace(/\/+$/, '');
 const API_BASE_URL = rawApiUrl
   ? (rawApiUrl.endsWith('/api/v1') ? rawApiUrl : `${rawApiUrl}/api/v1`)
   : '/api/v1';
