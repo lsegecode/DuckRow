@@ -99,7 +99,20 @@
     "edit_modal_title": "Edit Ticket / Add Context",
     "edit_modal_subtitle": "Modify the summary, expand the description, or attach new screenshots",
     "description_placeholder": "Write or expand the ticket details...",
-    "add_screenshots_label": "Add New Screenshots"
+    "add_screenshots_label": "Add New Screenshots",
+    "insert_section": "Insert section:",
+    "add_info_pill": "+ Extra info",
+    "add_steps_pill": "+ Steps to reproduce",
+    "add_tech_pill": "+ Tech notes",
+    "add_info_heading": "💡 Additional Information",
+    "add_info_placeholder": "Extra details for the team...",
+    "add_steps_heading": "⚠️ Steps to reproduce",
+    "add_steps_placeholder": "1. Go to...\n2. Click on...\n3. Error occurs...",
+    "add_tech_heading": "🔧 Technical notes",
+    "add_tech_placeholder": "Technical context or preliminary findings...",
+    "paste_shortcut": "📋 Ctrl + V to paste screenshot",
+    "supported_formats": "Supported formats: PNG, JPG, JPEG, WEBP",
+    "new_images_label": "New images to upload ({{count}}):"
   },
   "wizard": {
     "step_context": "Context",
@@ -191,6 +204,18 @@
     "testing_by": "Testing by {{name}}",
     "unassigned": "Unassigned",
     "oldest_badge": "Oldest",
-    "count_breakdown": "{{count}} tickets"
+    "count_breakdown": "{{count}} tickets",
+    "drop_here": "Drop here",
+    "modal_move_ticket": "Move Ticket",
+    "modal_assign_resolver": "Assign Responsible Resolver",
+    "modal_unassigned": "— Unassigned —",
+    "modal_claim_question": "🙋 Assign this ticket to yourself and start working on it?",
+    "modal_claim_desc": "You will be recorded as the assignee and the ticket will transition to In Progress.",
+    "modal_claim_confirm": "✔ Assign to Me & Start",
+    "modal_move_confirm": "✔ Move to {{status}}",
+    "modal_resolved_at": "📅 When was it resolved?",
+    "modal_docs_label": "📝 Resolution documentation",
+    "modal_docs_optional": "(optional)",
+    "modal_docs_placeholder": "Briefly describe how it was resolved..."
   }
 }

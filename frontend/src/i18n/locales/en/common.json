@@ -39,5 +39,11 @@
     "en": "English",
     "es": "Español",
     "switch_language": "Language"
+  },
+  "date_picker": {
+    "select_now": "Select Now",
+    "done": "Done",
+    "hour": "H:",
+    "minute": "M:"
   }
 }

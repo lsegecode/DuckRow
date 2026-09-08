@@ -183,10 +183,10 @@ export default function EditTicketModal({
             </span>
             <div>
               <h2 className="text-base font-bold text-text-primary">
-                {t('tickets:detail.edit_modal_title', 'Editar Ticket / Agregar Contexto')}
+                {t('tickets:detail.edit_modal_title', 'Edit Ticket / Add Context')}
               </h2>
               <p className="text-xs text-text-muted">
-                {t('tickets:detail.edit_modal_subtitle', 'Agrega más contexto, modifica la descripción o adjunta capturas')}
+                {t('tickets:detail.edit_modal_subtitle', 'Modify the summary, expand the description, or attach new screenshots')}
               </p>
             </div>
           </div>
@@ -203,14 +203,14 @@ export default function EditTicketModal({
           {/* Title */}
           <div>
             <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-              {t('tickets:table.title', 'Título del Ticket')} <span className="text-urgency-high">*</span>
+              {t('tickets:table.title', 'Ticket Title')} <span className="text-urgency-high">*</span>
             </label>
             <input
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={t('tickets:wizard.title_hint', 'Título claro y descriptivo')}
+              placeholder={t('tickets:wizard.title_hint', 'Clear, descriptive title')}
               className="w-full px-3.5 py-2.5 bg-obsidian border border-border rounded-xl text-text-primary text-sm focus:border-teal outline-none transition-colors"
             />
           </div>
@@ -220,31 +220,31 @@ export default function EditTicketModal({
             {/* Ticket Type */}
             <div>
               <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-                {t('tickets:table.type', 'Tipo')}
+                {t('tickets:table.type', 'Type')}
               </label>
               <select
                 value={ticketType}
                 onChange={(e) => setTicketType(e.target.value as TicketType)}
-                className="w-full px-3.5 py-2 bg-obsidian border border-border rounded-xl text-text-primary text-sm focus:border-teal outline-none cursor-pointer"
+                className="w-full px-3.5 py-2.5 bg-obsidian border border-border rounded-xl text-text-primary text-sm focus:border-teal outline-none cursor-pointer"
               >
-                <option value="BUG">🐛 {t('tickets:type.BUG', 'Bug / Error')}</option>
-                <option value="FEATURE">🚀 {t('tickets:type.FEATURE', 'Funcionalidad')}</option>
+                <option value="BUG">{t('tickets:wizard.type_bug', '🐞 Error / Bug')}</option>
+                <option value="FEATURE">{t('tickets:wizard.type_feature', '✨ Request / Improvement')}</option>
               </select>
             </div>
 
             {/* Urgency */}
             <div>
               <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-                {t('tickets:table.urgency', 'Urgencia')}
+                {t('tickets:table.urgency', 'Urgency')}
               </label>
               <select
                 value={urgency}
                 onChange={(e) => setUrgency(e.target.value as Urgency)}
-                className="w-full px-3.5 py-2 bg-obsidian border border-border rounded-xl text-text-primary text-sm focus:border-teal outline-none cursor-pointer"
+                className="w-full px-3.5 py-2.5 bg-obsidian border border-border rounded-xl text-text-primary text-sm focus:border-teal outline-none cursor-pointer"
               >
-                <option value="LOW">{t('tickets:urgency.LOW', 'Baja')}</option>
-                <option value="MEDIUM">{t('tickets:urgency.MEDIUM', 'Media')}</option>
-                <option value="HIGH">{t('tickets:urgency.HIGH', 'Alta')}</option>
+                <option value="LOW">{t('tickets:urgency.LOW', 'Low')}</option>
+                <option value="MEDIUM">{t('tickets:urgency.MEDIUM', 'Medium')}</option>
+                <option value="HIGH">{t('tickets:urgency.HIGH', 'High')}</option>
               </select>
             </div>
           </div>
@@ -253,36 +253,53 @@ export default function EditTicketModal({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                {t('tickets:detail.description_heading', 'Descripción y Contexto')}
+                {t('tickets:detail.description_heading', 'Description & Context')}
               </label>
               <span className="text-[11px] text-text-muted font-sans">
-                {t('tickets:wizard.paste_shortcut', 'Soporta Markdown')}
+                {t('tickets:wizard.paste_shortcut', 'Supports Markdown')}
               </span>
             </div>
 
             {/* Quick Helper Pills to add more context sections */}
             <div className="flex flex-wrap items-center gap-1.5 py-1">
-              <span className="text-[11px] text-text-muted mr-1">Insertar sección:</span>
+              <span className="text-[11px] text-text-muted mr-1">
+                {t('tickets:detail.insert_section', 'Insert section:')}
+              </span>
               <button
                 type="button"
-                onClick={() => handleAppendSection('💡 Información Adicional', 'Detalles extra para el equipo...')}
+                onClick={() =>
+                  handleAppendSection(
+                    t('tickets:detail.add_info_heading', '💡 Additional Information'),
+                    t('tickets:detail.add_info_placeholder', 'Extra details for the team...')
+                  )
+                }
                 className="px-2 py-0.5 rounded-lg bg-surface hover:bg-teal/15 hover:text-teal-glow text-text-secondary text-[11px] font-medium border border-border transition-colors cursor-pointer"
               >
-                + Info adicional
+                {t('tickets:detail.add_info_pill', '+ Extra info')}
               </button>
               <button
                 type="button"
-                onClick={() => handleAppendSection('⚠️ Pasos para reproducir', '1. Ir a...\n2. Hacer clic en...\n3. Ocurre error...')}
+                onClick={() =>
+                  handleAppendSection(
+                    t('tickets:detail.add_steps_heading', '⚠️ Steps to reproduce'),
+                    t('tickets:detail.add_steps_placeholder', '1. Go to...\n2. Click on...\n3. Error occurs...')
+                  )
+                }
                 className="px-2 py-0.5 rounded-lg bg-surface hover:bg-amber-500/15 hover:text-amber-300 text-text-secondary text-[11px] font-medium border border-border transition-colors cursor-pointer"
               >
-                + Pasos a reproducir
+                {t('tickets:detail.add_steps_pill', '+ Steps to reproduce')}
               </button>
               <button
                 type="button"
-                onClick={() => handleAppendSection('🔧 Notas técnicas', 'Contexto técnico o hallazgos preliminares...')}
+                onClick={() =>
+                  handleAppendSection(
+                    t('tickets:detail.add_tech_heading', '🔧 Technical notes'),
+                    t('tickets:detail.add_tech_placeholder', 'Technical context or preliminary findings...')
+                  )
+                }
                 className="px-2 py-0.5 rounded-lg bg-surface hover:bg-indigo-500/15 hover:text-indigo-300 text-text-secondary text-[11px] font-medium border border-border transition-colors cursor-pointer"
               >
-                + Notas técnicas
+                {t('tickets:detail.add_tech_pill', '+ Tech notes')}
               </button>
             </div>
 
@@ -290,7 +307,7 @@ export default function EditTicketModal({
               rows={7}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={t('tickets:detail.description_placeholder', 'Escribe o amplía la información del ticket...')}
+              placeholder={t('tickets:detail.description_placeholder', 'Write or expand the ticket details...')}
               className="w-full px-3.5 py-3 bg-obsidian border border-border rounded-xl text-text-primary text-sm focus:border-teal outline-none resize-y leading-relaxed font-sans"
             />
           </div>
@@ -299,7 +316,7 @@ export default function EditTicketModal({
           {ticket.attachments && ticket.attachments.length > 0 && (
             <div className="space-y-2 pt-2 border-t border-border/40">
               <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block">
-                {t('tickets:detail.attachments_heading', 'Capturas existentes')} ({ticket.attachments.length})
+                {t('tickets:detail.attachments_heading', 'Existing Attachments')} ({ticket.attachments.length})
               </span>
               <div className="flex flex-wrap gap-2">
                 {ticket.attachments.map((att) => (
@@ -319,10 +336,10 @@ export default function EditTicketModal({
           <div className="space-y-3 pt-2 border-t border-border/40">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                {t('tickets:detail.add_screenshots_label', 'Agregar Nuevas Capturas')}
+                {t('tickets:detail.add_screenshots_label', 'Add New Screenshots')}
               </label>
               <span className="text-[11px] text-teal-glow font-medium">
-                📋 Ctrl + V para pegar captura
+                {t('tickets:detail.paste_shortcut', '📋 Ctrl + V to paste screenshot')}
               </span>
             </div>
 
@@ -358,10 +375,10 @@ export default function EditTicketModal({
               <div className="flex flex-col items-center gap-1.5 pointer-events-none">
                 <span className="text-2xl">📸</span>
                 <p className="text-xs text-text-primary font-medium">
-                  {t('tickets:wizard.attachments_hint', 'Arrastra imágenes aquí o haz clic para seleccionarlas')}
+                  {t('tickets:wizard.attachments_hint', 'Drag images here or click to browse')}
                 </p>
                 <p className="text-[11px] text-text-muted">
-                  Formatos soportados: PNG, JPG, JPEG, WEBP
+                  {t('tickets:detail.supported_formats', 'Supported formats: PNG, JPG, JPEG, WEBP')}
                 </p>
               </div>
             </div>
@@ -370,7 +387,10 @@ export default function EditTicketModal({
             {newImages.length > 0 && (
               <div className="space-y-2">
                 <span className="text-xs font-medium text-teal-glow">
-                  Nuevas imágenes a subir ({newImages.length}):
+                  {t('tickets:detail.new_images_label', {
+                    count: newImages.length,
+                    defaultValue: `New images to upload (${newImages.length}):`,
+                  })}
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   {newImages.map((img) => (
@@ -411,7 +431,7 @@ export default function EditTicketModal({
             disabled={isPending}
             className="px-4 py-2 bg-surface hover:bg-surface-hover text-text-secondary hover:text-text-primary rounded-xl text-xs font-semibold transition-all border border-border cursor-pointer"
           >
-            {t('common:actions.cancel', 'Cancelar')}
+            {t('common:actions.cancel', 'Cancel')}
           </button>
           <button
             type="submit"
@@ -422,10 +442,10 @@ export default function EditTicketModal({
             {isPending ? (
               <>
                 <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>{t('common:actions.saving', 'Guardando...')}</span>
+                <span>{t('common:actions.saving', 'Saving...')}</span>
               </>
             ) : (
-              <span>{t('common:actions.save_changes', 'Guardar Cambios')}</span>
+              <span>{t('common:actions.save_changes', 'Save Changes')}</span>
             )}
           </button>
         </div>

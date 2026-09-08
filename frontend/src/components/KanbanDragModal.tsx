@@ -1,6 +1,7 @@
 /**
  * KanbanDragModal — Contextual modal for Kanban drag & drop transitions.
  *
+ * Fully internationalized (EN / ES).
  * Renders different UI depending on the target status and user role:
  * - → IN_PROGRESS + SYSADMIN: resolver selector
  * - → IN_PROGRESS + RESOLVER: self-assign confirmation
@@ -8,6 +9,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Ticket, TicketStatus, UserProfile, Role } from '../types';
 import { toLocalInputDateTime } from '../utils/dateUtils';
 import CustomDateTimePicker from './CustomDateTimePicker';
@@ -38,6 +40,7 @@ export default function KanbanDragModal({
   onCancel,
   isPending,
 }: KanbanDragModalProps) {
+  const { t } = useTranslation(['tickets', 'common']);
   const [assignedToId, setAssignedToId] = useState<number | ''>(
     ticket.assigned_to?.id ?? ''
   );
@@ -84,13 +87,6 @@ export default function KanbanDragModal({
   const isMovingToProgress = targetStatus === 'IN_PROGRESS';
   const isClosing = targetStatus === 'RESOLVED' || targetStatus === 'CLOSED';
 
-  const targetLabel: Record<TicketStatus, string> = {
-    OPEN: 'Abierto',
-    IN_PROGRESS: 'En Progreso',
-    RESOLVED: 'Resuelto',
-    CLOSED: 'Cerrado',
-  };
-
   const targetColorClass: Partial<Record<TicketStatus, string>> = {
     IN_PROGRESS: 'text-status-in-progress',
     RESOLVED: 'text-status-resolved',
@@ -121,18 +117,18 @@ export default function KanbanDragModal({
         <div className="px-6 py-4 border-b border-border/60 flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-semibold text-text-muted uppercase tracking-widest mb-1">
-              Mover ticket
+              {t('board.modal_move_ticket')}
             </p>
             <h2 className="text-base font-bold text-text-primary leading-snug">
               → <span className={targetColorClass[targetStatus] || 'text-text-primary'}>
-                {targetLabel[targetStatus]}
+                {t(`status.${targetStatus}`)}
               </span>
             </h2>
             <p className="text-xs text-text-muted mt-1 line-clamp-1">{ticket.title}</p>
           </div>
           <button
             onClick={handleCancel}
-            className="shrink-0 w-7 h-7 rounded-lg bg-surface hover:bg-surface-hover flex items-center justify-center text-text-muted hover:text-text-primary transition-all text-sm"
+            className="shrink-0 w-7 h-7 rounded-lg bg-surface hover:bg-surface-hover flex items-center justify-center text-text-muted hover:text-text-primary transition-all text-sm cursor-pointer"
           >
             ✕
           </button>
@@ -145,14 +141,14 @@ export default function KanbanDragModal({
           {isMovingToProgress && role === 'SYSADMIN' && (
             <div>
               <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                Asignar resolutor responsable
+                {t('board.modal_assign_resolver')}
               </label>
               <select
                 value={assignedToId}
                 onChange={(e) => setAssignedToId(e.target.value ? Number(e.target.value) : '')}
                 className="w-full px-3 py-2 bg-obsidian border border-border rounded-xl text-text-primary text-sm focus:border-teal outline-none cursor-pointer"
               >
-                <option value="">— Sin asignar —</option>
+                <option value="">{t('board.modal_unassigned')}</option>
                 {resolvers.map((res) => (
                   <option key={res.user.id} value={res.user.id}>
                     {res.user.first_name || res.user.username}
@@ -166,11 +162,10 @@ export default function KanbanDragModal({
           {isMovingToProgress && role === 'RESOLVER' && (
             <div className="p-4 rounded-xl bg-teal/5 border border-teal/20">
               <p className="text-sm text-text-primary font-medium">
-                🙋 ¿Asignarte este ticket y comenzar a trabajar en él?
+                {t('board.modal_claim_question')}
               </p>
               <p className="text-xs text-text-muted mt-1">
-                Serás registrado como responsable y el ticket pasará a{' '}
-                <span className="text-status-in-progress font-semibold">En Progreso</span>.
+                {t('board.modal_claim_desc')}
               </p>
             </div>
           )}
@@ -180,27 +175,27 @@ export default function KanbanDragModal({
             <>
               <div>
                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                  📅 ¿Cuándo fue resuelto?
+                  {t('board.modal_resolved_at')}
                 </label>
                 <CustomDateTimePicker
                   value={resolvedAt}
                   max={toLocalInputDateTime(new Date())}
                   onChange={(val) => setResolvedAt(val)}
                   accentColor="resolved"
-                  placeholder="dd/mm/aaaa hh:mm"
+                  placeholder="YYYY-MM-DD HH:mm"
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-                  📝 Documentación de cierre{' '}
-                  <span className="text-text-muted font-normal">(opcional)</span>
+                  {t('board.modal_docs_label')}{' '}
+                  <span className="text-text-muted font-normal">{t('board.modal_docs_optional')}</span>
                 </label>
                 <textarea
                   rows={3}
-                  placeholder="Describe brevemente cómo se resolvió..."
+                  placeholder={t('board.modal_docs_placeholder')}
                   value={resDocs}
                   onChange={(e) => setResDocs(e.target.value)}
-                  className="w-full px-3 py-2 bg-obsidian border border-border rounded-xl text-text-primary text-sm focus:border-teal outline-none resize-none"
+                  className="w-full px-3 py-2 bg-obsidian border border-border rounded-xl text-text-primary text-sm focus:border-teal outline-none resize-none font-sans"
                 />
               </div>
             </>
@@ -213,15 +208,15 @@ export default function KanbanDragModal({
             type="button"
             onClick={handleCancel}
             disabled={isPending}
-            className="px-4 py-2 bg-surface hover:bg-surface-hover text-text-secondary hover:text-text-primary rounded-xl text-xs font-semibold transition-all border border-border"
+            className="px-4 py-2 bg-surface hover:bg-surface-hover text-text-secondary hover:text-text-primary rounded-xl text-xs font-semibold transition-all border border-border cursor-pointer"
           >
-            Cancelar
+            {t('common:actions.cancel')}
           </button>
           <button
             type="button"
             onClick={handleConfirm}
             disabled={isPending}
-            className={`px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-60 ${
+            className={`px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-60 cursor-pointer ${
               targetStatus === 'RESOLVED' || targetStatus === 'CLOSED'
                 ? 'bg-status-resolved hover:bg-status-resolved/80 text-obsidian'
                 : 'bg-teal hover:bg-teal-light text-white shadow-[var(--shadow-glow-teal)]'
@@ -230,8 +225,8 @@ export default function KanbanDragModal({
             {isPending
               ? '...'
               : isMovingToProgress && role === 'RESOLVER'
-              ? '✔ Asignarme y comenzar'
-              : `✔ Mover a ${targetLabel[targetStatus]}`}
+              ? t('board.modal_claim_confirm')
+              : t('board.modal_move_confirm', { status: t(`status.${targetStatus}`) })}
           </button>
         </div>
       </div>

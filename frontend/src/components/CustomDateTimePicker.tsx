@@ -11,6 +11,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface CustomDateTimePickerProps {
   value: string; // YYYY-MM-DDTHH:mm or ISO string or ''
@@ -23,12 +24,15 @@ interface CustomDateTimePickerProps {
   disabled?: boolean;
 }
 
-const MONTH_NAMES_ES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-];
+const MONTH_NAMES = {
+  en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+  es: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+};
 
-const WEEKDAYS_ES = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
+const WEEKDAYS = {
+  en: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
+  es: ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'],
+};
 
 export default function CustomDateTimePicker({
   value,
@@ -36,10 +40,17 @@ export default function CustomDateTimePicker({
   max,
   min,
   accentColor = 'teal',
-  placeholder = 'dd/mm/aaaa hh:mm',
+  placeholder,
   className = '',
   disabled = false,
 }: CustomDateTimePickerProps) {
+  const { i18n, t } = useTranslation('common');
+  const lang = i18n.language?.startsWith('es') ? 'es' : 'en';
+  const monthNames = MONTH_NAMES[lang];
+  const weekdays = WEEKDAYS[lang];
+  const defaultPlaceholder = lang === 'es' ? 'dd/mm/aaaa hh:mm' : 'yyyy-mm-dd hh:mm';
+  const effectivePlaceholder = placeholder || defaultPlaceholder;
+
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -268,7 +279,7 @@ export default function CustomDateTimePicker({
               ‹
             </button>
             <div className="flex items-center gap-1.5 text-sm font-bold text-text-primary">
-              <span>{MONTH_NAMES_ES[viewMonth]}</span>
+              <span>{monthNames[viewMonth]}</span>
               <span className="text-text-secondary font-medium">{viewYear}</span>
             </div>
             <button
@@ -280,9 +291,9 @@ export default function CustomDateTimePicker({
             </button>
           </div>
 
-          {/* Weekday headers: Lu Ma Mi Ju Vi Sá Do */}
+          {/* Weekday headers */}
           <div className="grid grid-cols-7 gap-1 text-center mb-1.5">
-            {WEEKDAYS_ES.map((day) => (
+            {weekdays.map((day) => (
               <span key={day} className="text-[11px] font-semibold text-text-muted uppercase">
                 {day}
               </span>
@@ -409,7 +420,7 @@ export default function CustomDateTimePicker({
               onClick={handleSetNow}
               className="text-xs font-semibold text-text-secondary hover:text-teal-glow transition-colors cursor-pointer"
             >
-              📅 Seleccionar Ahora
+              📅 {t('common:date_picker.select_now', lang === 'es' ? 'Seleccionar Ahora' : 'Select Now')}
             </button>
             <button
               type="button"
@@ -420,7 +431,7 @@ export default function CustomDateTimePicker({
                   : 'bg-teal hover:bg-teal-light text-white'
               }`}
             >
-              Listo ✔
+              {t('common:date_picker.done', lang === 'es' ? 'Listo ✔' : 'Done ✔')}
             </button>
           </div>
         </div>

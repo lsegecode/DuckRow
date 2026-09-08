@@ -280,7 +280,7 @@ export default function TicketBoardView({ tickets, isLoading }: TicketBoardViewP
                 {isDragTarget && (
                   <div className="mx-3 mt-3 px-3 py-2 rounded-xl border border-dashed border-current/40 text-[11px] font-semibold text-center animate-fade-in"
                     style={{ color: 'var(--color-teal-glow)', background: 'rgba(13,92,77,0.08)' }}>
-                    ⬇ Soltar aquí
+                    ⬇ {t('board.drop_here')}
                   </div>
                 )}
 
