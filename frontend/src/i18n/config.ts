@@ -37,13 +37,14 @@ i18n
   .init({
     resources,
     fallbackLng: 'en',
+    lng: (typeof window !== 'undefined' && localStorage.getItem('i18nextLng')) || 'en',
     defaultNS: 'common',
     ns: ['common', 'auth', 'tickets', 'dashboard', 'backlog'],
     interpolation: {
       escapeValue: false, // React already escapes values
     },
     detection: {
-      order: ['localStorage', 'navigator'],
+      order: ['localStorage'],
       caches: ['localStorage'],
     },
   });
