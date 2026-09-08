@@ -239,7 +239,7 @@ export default function CustomDateTimePicker({
           </span>
           <div className="flex flex-col">
             <span className={`text-sm font-medium tracking-wide ${value ? 'text-text-primary' : 'text-text-muted'}`}>
-              {parsedDate ? formatDisplay(parsedDate) : placeholder}
+              {parsedDate ? formatDisplay(parsedDate) : effectivePlaceholder}
             </span>
           </div>
         </div>
@@ -248,14 +248,14 @@ export default function CustomDateTimePicker({
           <button
             type="button"
             onClick={handleSetNow}
-            title="Establecer fecha y hora actual"
+            title={t('common:date_picker.select_now', lang === 'es' ? 'Establecer fecha y hora actual' : 'Set current date and time')}
             className={`px-2 py-0.5 text-[11px] font-semibold rounded-md transition-all ${
               isResolved
                 ? 'bg-status-resolved/15 text-status-resolved hover:bg-status-resolved/25'
                 : 'bg-teal/20 text-teal-glow hover:bg-teal/30'
             }`}
           >
-            Ahora
+            {lang === 'es' ? 'Ahora' : 'Now'}
           </button>
           <span className={`text-xs text-text-muted transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
             ▼
