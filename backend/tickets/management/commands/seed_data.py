@@ -105,9 +105,11 @@ class Command(BaseCommand):
                     'last_name': config['last_name'],
                 },
             )
-            if created:
-                user.set_password(config['password'])
-                user.save()
+            user.set_password(config['password'])
+            user.email = config['email']
+            user.first_name = config['first_name']
+            user.last_name = config['last_name']
+            user.save()
 
             # Update profile
             profile = user.profile
