@@ -19,10 +19,17 @@ from drf_spectacular.views import (
     SpectacularRedocView,
 )
 
+from django.http import JsonResponse
 from users.sso_views import sso_exchange_view
+
+def health_check(request):
+    return JsonResponse({"status": "ok", "service": "DuckRow API"})
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    # Health check endpoint (for UptimeRobot keep-alive)
+    path('api/health/', health_check, name='health_check'),
 
     # OpenAPI 3 Schema & Interactive API Documentation (Swagger / Redoc)
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
