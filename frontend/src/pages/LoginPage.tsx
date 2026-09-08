@@ -1,6 +1,6 @@
 /**
  * LoginPage — dark-themed login with duck branding, language selection,
- * and 1-click portfolio demo role selector.
+ * and minimalist 2-tone (green & grey) portfolio demo access selector.
  */
 
 import { useState, useEffect, type FormEvent } from 'react';
@@ -13,7 +13,6 @@ interface DemoUser {
   username: string;
   password: string;
   roleBadge: string;
-  badgeColor: string;
   titleKey: string;
   descKey: string;
 }
@@ -23,7 +22,6 @@ const CLIENT_OPTIONS: DemoUser[] = [
     username: 'client_it',
     password: 'client1234',
     roleBadge: 'IT AREA',
-    badgeColor: 'bg-status-open/15 text-blue-400 border-status-open/30',
     titleKey: 'auth:demo_client_it',
     descKey: 'auth:demo_client_it_desc',
   },
@@ -31,7 +29,6 @@ const CLIENT_OPTIONS: DemoUser[] = [
     username: 'client_hr',
     password: 'client1234',
     roleBadge: 'HR AREA',
-    badgeColor: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
     titleKey: 'auth:demo_client_hr',
     descKey: 'auth:demo_client_hr_desc',
   },
@@ -39,7 +36,6 @@ const CLIENT_OPTIONS: DemoUser[] = [
     username: 'client_finance',
     password: 'client1234',
     roleBadge: 'FINANCE & MKT',
-    badgeColor: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
     titleKey: 'auth:demo_client_finance',
     descKey: 'auth:demo_client_finance_desc',
   },
@@ -108,10 +104,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-obsidian flex items-center justify-center p-4 py-8">
-      {/* Background glow effects */}
+      {/* Background glow effects - strictly subtle teal and dark obsidian */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-teal/5 rounded-full blur-[128px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gold/5 rounded-full blur-[128px]" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-teal/[0.03] rounded-full blur-[140px]" />
       </div>
 
       <div className="relative w-full max-w-4xl lg:max-w-5xl animate-fade-in">
@@ -132,23 +127,28 @@ export default function LoginPage() {
         {/* Error notification banner */}
         {error && (
           <div className="mb-6 p-4 rounded-xl bg-urgency-high/10 border border-urgency-high/20 text-urgency-high text-sm animate-fade-in flex items-center gap-2">
-            <span className="font-bold">✕</span> {error}
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="15" y1="9" x2="9" y2="15" />
+              <line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+            <span>{error}</span>
           </div>
         )}
 
         {/* ── Responsive 2-Column Grid (Parallel on md+, Stacked on mobile) ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
           {/* Column 1: 1-CLICK PORTFOLIO DEMO ACCESS PANEL */}
-          <div className="glass-card p-6 border border-teal/30 shadow-[0_0_25px_rgba(13,92,77,0.15)] relative overflow-hidden flex flex-col justify-between">
+          <div className="glass-card p-6 border border-border/80 bg-obsidian-light/60 backdrop-blur-md relative overflow-hidden flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-teal animate-pulse" />
+                  <span className="w-2 h-2 rounded-full bg-teal animate-pulse" />
                   <h2 className="text-sm font-bold text-text-primary uppercase tracking-wider">
                     {t('auth:demo_title')}
                   </h2>
                 </div>
-                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-teal/15 text-teal-lighter border border-teal/30">
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-surface border border-border text-text-muted">
                   1-Click Login
                 </span>
               </div>
@@ -163,18 +163,20 @@ export default function LoginPage() {
                   type="button"
                   disabled={isLoading}
                   onClick={() => handleLogin('admin', 'admin1234', 'admin')}
-                  className="w-full p-3 rounded-xl bg-surface/80 hover:bg-surface-hover border border-border hover:border-gold/50 transition-all text-left flex items-center justify-between group disabled:opacity-50 cursor-pointer"
+                  className="w-full p-3 rounded-xl bg-surface/40 hover:bg-surface/90 border border-border/70 hover:border-teal/50 transition-all text-left flex items-center justify-between group disabled:opacity-50 cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-gold/15 text-gold flex items-center justify-center font-bold text-lg group-hover:scale-105 transition-transform border border-gold/25">
-                      👑
+                    <div className="w-8 h-8 rounded-lg bg-surface border border-border/80 group-hover:border-teal/40 group-hover:bg-teal/10 text-text-muted group-hover:text-teal-lighter flex items-center justify-center transition-all">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-text-primary group-hover:text-gold-light transition-colors">
+                        <span className="text-sm font-semibold text-text-primary group-hover:text-teal-lighter transition-colors">
                           {t('auth:demo_role_admin')}
                         </span>
-                        <span className="text-[10px] px-1.5 py-0.2 rounded font-mono bg-gold/15 text-gold border border-gold/30">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-surface border border-border text-text-muted group-hover:border-teal/30 group-hover:text-teal-lighter transition-colors">
                           SYSADMIN
                         </span>
                       </div>
@@ -182,11 +184,11 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  <div className="text-xs font-semibold text-text-secondary group-hover:text-gold flex items-center gap-1">
+                  <div className="text-xs font-semibold text-text-muted group-hover:text-teal-lighter flex items-center gap-1 transition-colors">
                     {loadingRole === 'admin' ? (
-                      <span className="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+                      <span className="w-4 h-4 border-2 border-teal-lighter border-t-transparent rounded-full animate-spin" />
                     ) : (
-                      <span>→</span>
+                      <span>&rarr;</span>
                     )}
                   </div>
                 </button>
@@ -196,18 +198,21 @@ export default function LoginPage() {
                   type="button"
                   disabled={isLoading}
                   onClick={() => handleLogin('resolver1', 'resolver1234', 'resolver')}
-                  className="w-full p-3 rounded-xl bg-surface/80 hover:bg-surface-hover border border-border hover:border-teal/50 transition-all text-left flex items-center justify-between group disabled:opacity-50 cursor-pointer"
+                  className="w-full p-3 rounded-xl bg-surface/40 hover:bg-surface/90 border border-border/70 hover:border-teal/50 transition-all text-left flex items-center justify-between group disabled:opacity-50 cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-teal/20 text-teal-lighter flex items-center justify-center font-bold text-lg group-hover:scale-105 transition-transform border border-teal/30">
-                      🛠️
+                    <div className="w-8 h-8 rounded-lg bg-surface border border-border/80 group-hover:border-teal/40 group-hover:bg-teal/10 text-text-muted group-hover:text-teal-lighter flex items-center justify-center transition-all">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold text-text-primary group-hover:text-teal-lighter transition-colors">
                           {t('auth:demo_role_resolver')}
                         </span>
-                        <span className="text-[10px] px-1.5 py-0.2 rounded font-mono bg-teal/20 text-teal-lighter border border-teal/40">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-surface border border-border text-text-muted group-hover:border-teal/30 group-hover:text-teal-lighter transition-colors">
                           RESOLVER
                         </span>
                       </div>
@@ -215,32 +220,34 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  <div className="text-xs font-semibold text-text-secondary group-hover:text-teal-lighter flex items-center gap-1">
+                  <div className="text-xs font-semibold text-text-muted group-hover:text-teal-lighter flex items-center gap-1 transition-colors">
                     {loadingRole === 'resolver' ? (
                       <span className="w-4 h-4 border-2 border-teal-lighter border-t-transparent rounded-full animate-spin" />
                     ) : (
-                      <span>→</span>
+                      <span>&rarr;</span>
                     )}
                   </div>
                 </button>
 
                 {/* Option 3: Client (Expandable breakdown by department) */}
-                <div className="rounded-xl bg-surface/80 border border-border transition-all">
+                <div className="rounded-xl bg-surface/40 border border-border/70 transition-all">
                   <button
                     type="button"
                     onClick={() => setIsClientOpen(!isClientOpen)}
-                    className="w-full p-3 text-left flex items-center justify-between group hover:bg-surface-hover rounded-xl transition-colors cursor-pointer"
+                    className="w-full p-3 text-left flex items-center justify-between group hover:bg-surface/80 rounded-xl transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-status-open/15 text-status-open flex items-center justify-center font-bold text-lg group-hover:scale-105 transition-transform border border-status-open/30">
-                        👥
+                      <div className="w-8 h-8 rounded-lg bg-surface border border-border/80 group-hover:border-teal/40 group-hover:bg-teal/10 text-text-muted group-hover:text-teal-lighter flex items-center justify-center transition-all">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-text-primary group-hover:text-blue-400 transition-colors">
+                          <span className="text-sm font-semibold text-text-primary group-hover:text-teal-lighter transition-colors">
                             {t('auth:demo_role_client')}
                           </span>
-                          <span className="text-[10px] px-1.5 py-0.2 rounded font-mono bg-status-open/15 text-blue-400 border border-status-open/30">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-surface border border-border text-text-muted group-hover:border-teal/30 group-hover:text-teal-lighter transition-colors">
                             CLIENT
                           </span>
                         </div>
@@ -249,14 +256,16 @@ export default function LoginPage() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-text-muted">{isClientOpen ? '▲' : '▼'}</span>
+                      <svg className={`w-3.5 h-3.5 text-text-muted transition-transform duration-200 ${isClientOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
                     </div>
                   </button>
 
                   {/* Sub-departments dropdown */}
                   {isClientOpen && (
                     <div className="p-3 pt-0 border-t border-border/50 space-y-2 mt-1 animate-fade-in">
-                      <p className="text-[11px] text-text-muted font-mono uppercase tracking-wider mb-2">
+                      <p className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-2">
                         Select department / area:
                       </p>
                       {CLIENT_OPTIONS.map((c) => (
@@ -265,25 +274,25 @@ export default function LoginPage() {
                           type="button"
                           disabled={isLoading}
                           onClick={() => handleLogin(c.username, c.password, c.username)}
-                          className="w-full p-2.5 rounded-lg bg-obsidian/70 hover:bg-obsidian border border-border/80 hover:border-teal/50 transition-all flex items-center justify-between text-left group disabled:opacity-50 cursor-pointer"
+                          className="w-full p-2.5 rounded-lg bg-surface/50 hover:bg-surface/90 border border-border/60 hover:border-teal/50 transition-all flex items-center justify-between text-left group disabled:opacity-50 cursor-pointer"
                         >
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-semibold text-text-primary group-hover:text-teal-lighter transition-colors">
                                 {t(c.titleKey)}
                               </span>
-                              <span className={`text-[9px] px-1 py-0.2 rounded font-mono border ${c.badgeColor}`}>
+                              <span className="text-[9px] px-1.5 py-0.5 rounded font-mono bg-surface border border-border text-text-muted group-hover:border-teal/30 group-hover:text-teal-lighter transition-colors">
                                 {c.roleBadge}
                               </span>
                             </div>
                             <p className="text-[11px] text-text-muted">{t(c.descKey)}</p>
                           </div>
 
-                          <div className="text-xs font-semibold text-text-secondary group-hover:text-teal flex items-center gap-1">
+                          <div className="text-xs font-semibold text-text-muted group-hover:text-teal-lighter flex items-center gap-1 transition-colors">
                             {loadingRole === c.username ? (
-                              <span className="w-3.5 h-3.5 border-2 border-teal border-t-transparent rounded-full animate-spin" />
+                              <span className="w-3.5 h-3.5 border-2 border-teal-lighter border-t-transparent rounded-full animate-spin" />
                             ) : (
-                              <span>→</span>
+                              <span>&rarr;</span>
                             )}
                           </div>
                         </button>
@@ -302,14 +311,16 @@ export default function LoginPage() {
                   onClick={() => setShowTable(!showTable)}
                   className="text-text-muted hover:text-text-primary transition-colors inline-flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span>{showTable ? '▲' : '▼'}</span>
+                  <svg className={`w-3 h-3 transition-transform duration-200 ${showTable ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
                   <span>{showTable ? t('auth:demo_credentials_hide') : t('auth:demo_credentials_toggle')}</span>
                 </button>
                 <span className="text-[11px] text-text-muted font-mono">passwords: *1234</span>
               </div>
 
               {showTable && (
-                <div className="mt-3 overflow-x-auto text-[11px] font-mono bg-obsidian/90 p-3 rounded-xl border border-border animate-fade-in">
+                <div className="mt-3 overflow-x-auto text-[11px] font-mono bg-surface/30 p-3 rounded-xl border border-border/70 animate-fade-in">
                   <table className="w-full text-left text-text-secondary">
                     <thead>
                       <tr className="border-b border-border/50 text-text-muted">
@@ -320,29 +331,29 @@ export default function LoginPage() {
                     </thead>
                     <tbody className="divide-y divide-border/30">
                       <tr>
-                        <td className="py-1 text-gold font-bold">admin</td>
-                        <td className="py-1 text-text-muted">admin1234</td>
-                        <td className="py-1 text-text-primary">SYSADMIN</td>
+                        <td className="py-1.5 text-text-primary font-semibold">admin</td>
+                        <td className="py-1.5 text-text-muted">admin1234</td>
+                        <td className="py-1.5 text-text-secondary">SYSADMIN</td>
                       </tr>
                       <tr>
-                        <td className="py-1 text-teal-lighter font-bold">resolver1</td>
-                        <td className="py-1 text-text-muted">resolver1234</td>
-                        <td className="py-1 text-text-primary">RESOLVER</td>
+                        <td className="py-1.5 text-text-primary font-semibold">resolver1</td>
+                        <td className="py-1.5 text-text-muted">resolver1234</td>
+                        <td className="py-1.5 text-text-secondary">RESOLVER</td>
                       </tr>
                       <tr>
-                        <td className="py-1 text-blue-400 font-bold">client_it</td>
-                        <td className="py-1 text-text-muted">client1234</td>
-                        <td className="py-1 text-text-primary">CLIENT (IT)</td>
+                        <td className="py-1.5 text-text-primary font-semibold">client_it</td>
+                        <td className="py-1.5 text-text-muted">client1234</td>
+                        <td className="py-1.5 text-text-secondary">CLIENT (IT)</td>
                       </tr>
                       <tr>
-                        <td className="py-1 text-purple-400 font-bold">client_hr</td>
-                        <td className="py-1 text-text-muted">client1234</td>
-                        <td className="py-1 text-text-primary">CLIENT (HR)</td>
+                        <td className="py-1.5 text-text-primary font-semibold">client_hr</td>
+                        <td className="py-1.5 text-text-muted">client1234</td>
+                        <td className="py-1.5 text-text-secondary">CLIENT (HR)</td>
                       </tr>
                       <tr>
-                        <td className="py-1 text-emerald-400 font-bold">client_finance</td>
-                        <td className="py-1 text-text-muted">client1234</td>
-                        <td className="py-1 text-text-primary">CLIENT (Finance)</td>
+                        <td className="py-1.5 text-text-primary font-semibold">client_finance</td>
+                        <td className="py-1.5 text-text-muted">client1234</td>
+                        <td className="py-1.5 text-text-secondary">CLIENT (Finance)</td>
                       </tr>
                     </tbody>
                   </table>
@@ -361,11 +372,11 @@ export default function LoginPage() {
           </div>
 
           {/* Column 2: Manual Login Card */}
-          <div className="glass-card p-6 border border-border/80 flex flex-col justify-between">
+          <div className="glass-card p-6 border border-border/80 bg-obsidian-light/60 backdrop-blur-md flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-text-secondary" />
+                  <span className="w-2 h-2 rounded-full bg-text-muted" />
                   <h2 className="text-sm font-bold text-text-primary uppercase tracking-wider">
                     {t('auth:manual_title')}
                   </h2>
@@ -390,7 +401,7 @@ export default function LoginPage() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
-                    className="w-full px-3.5 py-2.5 bg-obsidian border border-border rounded-xl text-sm text-text-primary placeholder-text-muted focus:border-teal focus:ring-1 focus:ring-teal/50 transition-all outline-none"
+                    className="w-full px-3.5 py-2.5 bg-obsidian border border-border rounded-xl text-sm text-text-primary placeholder-text-muted focus:border-teal focus:ring-1 focus:ring-teal/30 transition-all outline-none"
                     placeholder={t('auth:username_placeholder')}
                   />
                 </div>
@@ -405,7 +416,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="w-full px-3.5 py-2.5 bg-obsidian border border-border rounded-xl text-sm text-text-primary placeholder-text-muted focus:border-teal focus:ring-1 focus:ring-teal/50 transition-all outline-none"
+                    className="w-full px-3.5 py-2.5 bg-obsidian border border-border rounded-xl text-sm text-text-primary placeholder-text-muted focus:border-teal focus:ring-1 focus:ring-teal/30 transition-all outline-none"
                     placeholder={t('auth:password_placeholder')}
                   />
                 </div>
@@ -414,7 +425,7 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-3 bg-teal hover:bg-teal-light text-white font-semibold rounded-xl text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[var(--shadow-glow-teal)] active:scale-[0.98] cursor-pointer"
+                    className="w-full py-2.5 bg-teal hover:bg-teal-light text-white font-semibold rounded-xl text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[0_0_20px_rgba(13,92,77,0.3)] active:scale-[0.99] cursor-pointer"
                   >
                     {isLoading && !loadingRole ? (
                       <span className="inline-flex items-center gap-2">
@@ -431,7 +442,7 @@ export default function LoginPage() {
 
             <div className="mt-6 pt-3 border-t border-border/50 text-center">
               <p className="text-[11px] text-text-muted">
-                🔒 {t('common:tagline')}
+                {t('common:tagline')}
               </p>
             </div>
           </div>
