@@ -1,0 +1,406 @@
+"""
+Tickets app serializers.
+
+Role-aware serialization: CLIENT users never see `internal_priority`
+or `assigned_to` details. SYSADMIN and RESOLVER get full visibility.
+Supports ticket_type (BUG/FEATURE), screenshot attachments, and lifecycle timestamps.
+"""
+
+import base64
+from rest_framework import serializers
+from django.contrib.auth.models import User
+from django.core.files.base import ContentFile
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+
+from .models import Ticket, TicketAttachment
+from .teams_notifications import notify_ticket_created, notify_ticket_ready_for_review
+from users.models import Area
+from users.serializers import UserMinimalSerializer, AreaSerializer
+
+
+class TicketAttachmentSerializer(serializers.ModelSerializer):
+    """Serializer for ticket image/screenshot attachments."""
+
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TicketAttachment
+        fields = ['id', 'file_name', 'file_size', 'url', 'created_at']
+
+    def get_url(self, obj):
+        if obj.file:
+            request = self.context.get('request')
+            if request is not None:
+                return request.build_absolute_uri(obj.file.url)
+            return obj.file.url
+        return None
+
+
+class TicketListSerializer(serializers.ModelSerializer):
+    """
+    Lightweight serializer for list views.
+
+    Conditionally hides `internal_priority` based on the requesting
+    user's role (injected via serializer context).
+    """
+
+    created_by = UserMinimalSerializer(read_only=True)
+    assigned_to = UserMinimalSerializer(read_only=True)
+    source_area = AreaSerializer(read_only=True)
+
+    class Meta:
+        model = Ticket
+        fields = [
+            'id', 'title', 'ticket_type', 'status', 'urgency', 'internal_priority',
+            'branch', 'source_area', 'created_by', 'assigned_to',
+            'started_at', 'resolved_at',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'started_at', 'resolved_at']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        if request and hasattr(request.user, 'profile'):
+            if request.user.profile.role == 'CLIENT':
+                data.pop('internal_priority', None)
+                data.pop('assigned_to', None)
+        return data
+
+
+class TicketDetailSerializer(serializers.ModelSerializer):
+    """
+    Full detail serializer including resolution documentation, attachments, and lifecycle timestamps.
+
+    Also conditionally hides internal fields from CLIENT users.
+    """
+
+    created_by = UserMinimalSerializer(read_only=True)
+    assigned_to = UserMinimalSerializer(read_only=True)
+    source_area = AreaSerializer(read_only=True)
+    attachments = TicketAttachmentSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Ticket
+        fields = [
+            'id', 'title', 'ticket_type', 'description', 'status', 'urgency',
+            'internal_priority', 'branch', 'source_area', 'created_by',
+            'assigned_to', 'attachments', 'started_at', 'resolved_at',
+            'resolution_documentation', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_by', 'created_at', 'updated_at', 'started_at', 'resolved_at']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        if request and hasattr(request.user, 'profile'):
+            if request.user.profile.role == 'CLIENT':
+                data.pop('internal_priority', None)
+                data.pop('assigned_to', None)
+        return data
+
+
+class TicketCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for ticket creation.
+
+    Validates that the source_area belongs to the creator's areas (unless SYSADMIN/RESOLVER).
+    Supports ticket_type, optional branch selection for authorized users, and optional image/screenshot attachments.
+    """
+
+    source_area_id = serializers.UUIDField(write_only=True)
+    branch = serializers.ChoiceField(
+        choices=Ticket.BRANCH_CHOICES,
+        required=False,
+    )
+    uploaded_images = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        write_only=True,
+    )
+
+    class Meta:
+        model = Ticket
+        fields = [
+            'id', 'title', 'ticket_type', 'description', 'urgency',
+            'branch', 'source_area_id', 'uploaded_images', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def validate_source_area_id(self, value):
+        try:
+            area = Area.objects.get(id=value)
+        except Area.DoesNotExist:
+            raise serializers.ValidationError(_('Area not found.'))
+
+        request = self.context['request']
+        user_areas = request.user.profile.areas.all()
+
+        # SYSADMIN and RESOLVER can create tickets for any area
+        if request.user.profile.role in ('SYSADMIN', 'RESOLVER'):
+            return value
+
+        if area not in user_areas:
+            raise serializers.ValidationError(
+                _('You can only create tickets within your assigned areas.')
+            )
+        return value
+
+    def create(self, validated_data):
+        area_id = validated_data.pop('source_area_id')
+        uploaded_images = validated_data.pop('uploaded_images', [])
+        area = Area.objects.get(id=area_id)
+        request = self.context['request']
+        user = request.user
+        profile = getattr(user, 'profile', None)
+
+        # Branch resolution:
+        # If user is SYSADMIN or has branch == 'ALL', respect explicitly sent branch.
+        # Otherwise, enforce their assigned profile.branch.
+        user_branch = getattr(profile, 'branch', 'HQ')
+        if profile and (profile.role == 'SYSADMIN' or user_branch == 'ALL'):
+            chosen_branch = validated_data.pop('branch', None) or 'HQ'
+        else:
+            validated_data.pop('branch', None)
+            chosen_branch = 'BRANCH' if user_branch == 'BRANCH' else 'HQ'
+
+        ticket = Ticket.objects.create(
+            created_by=user,
+            source_area=area,
+            branch=chosen_branch,
+            **validated_data,
+        )
+
+        # Process Base64 images from JSON payload
+        for idx, img_str in enumerate(uploaded_images):
+            if isinstance(img_str, str) and img_str.startswith('data:image'):
+                try:
+                    header, base64_str = img_str.split(';base64,')
+                    ext = header.split('/')[-1].split('+')[0]
+                    if ext == 'jpeg':
+                        ext = 'jpg'
+                    data = base64.b64decode(base64_str)
+                    file_name = f'screenshot_{idx + 1}.{ext}'
+                    content_file = ContentFile(data, name=file_name)
+                    TicketAttachment.objects.create(
+                        ticket=ticket,
+                        file=content_file,
+                        file_name=file_name,
+                        file_size=len(data),
+                    )
+                except Exception:
+                    pass
+
+        # Process multipart/form-data files if provided
+        request = self.context.get('request')
+        if request and hasattr(request, 'FILES'):
+            for f in request.FILES.getlist('images'):
+                TicketAttachment.objects.create(
+                    ticket=ticket,
+                    file=f,
+                    file_name=f.name,
+                    file_size=f.size,
+                )
+
+        # Dispatch async notification to Microsoft Teams if configured
+        try:
+            notify_ticket_created(ticket)
+        except Exception:
+            pass
+
+        return ticket
+
+    def to_representation(self, instance):
+        return TicketDetailSerializer(instance, context=self.context).data
+
+
+class TicketUpdateSerializer(serializers.ModelSerializer):
+    """
+    Role-aware update serializer.
+
+    - SYSADMIN: can update all fields including internal_priority and assigned_to.
+    - RESOLVER: can update status, internal_priority, resolution_documentation, and resolved_at.
+    - CLIENT: cannot update tickets (enforced at permission level).
+    """
+
+    assigned_to_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        write_only=True,
+    )
+
+    resolved_at = serializers.DateTimeField(
+        required=False,
+        allow_null=True,
+    )
+
+    started_at = serializers.DateTimeField(
+        required=False,
+        allow_null=True,
+    )
+
+    estimated_resolution_time = serializers.DateTimeField(
+        required=False,
+        allow_null=True,
+    )
+
+    estimated_work_hours = serializers.CharField(
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+        max_length=50,
+    )
+
+    uploaded_images = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        write_only=True,
+    )
+
+    class Meta:
+        model = Ticket
+        fields = [
+            'id', 'title', 'ticket_type', 'description', 'status', 'urgency',
+            'internal_priority', 'assigned_to_id', 'resolution_documentation',
+            'estimated_resolution_time', 'estimated_work_hours',
+            'started_at', 'resolved_at', 'uploaded_images', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate(self, attrs):
+        request = self.context['request']
+        role = request.user.profile.role
+
+        if role == 'CLIENT':
+            allowed_fields = {'title', 'ticket_type', 'description', 'urgency', 'uploaded_images'}
+            incoming_fields = set(attrs.keys())
+            forbidden = incoming_fields - allowed_fields
+            if forbidden:
+                raise serializers.ValidationError(
+                    f'Clients can only update ticket context: {", ".join(allowed_fields)}. '
+                    f'Forbidden fields: {", ".join(forbidden)}'
+                )
+
+        elif role == 'RESOLVER':
+            allowed_fields = {
+                'title', 'ticket_type', 'description', 'urgency', 'uploaded_images',
+                'status', 'internal_priority', 'assigned_to_id',
+                'resolution_documentation', 'started_at', 'resolved_at',
+                'estimated_resolution_time', 'estimated_work_hours',
+            }
+            incoming_fields = set(attrs.keys())
+            forbidden = incoming_fields - allowed_fields
+            if forbidden:
+                raise serializers.ValidationError(
+                    f'Resolvers can only update: {", ".join(allowed_fields)}. '
+                    f'Forbidden fields: {", ".join(forbidden)}'
+                )
+
+        # resolved_at must not be before the ticket's creation date
+        resolved_at = attrs.get('resolved_at')
+        if resolved_at and self.instance and resolved_at < self.instance.created_at:
+            raise serializers.ValidationError(
+                {'resolved_at': _('Resolution date cannot be before the ticket creation date.')}
+            )
+
+        return attrs
+
+    def update(self, instance, validated_data):
+        uploaded_images = validated_data.pop('uploaded_images', [])
+        assigned_to_id = validated_data.pop('assigned_to_id', None)
+
+
+        if assigned_to_id is not None:
+            try:
+                assigned_user = User.objects.get(id=assigned_to_id)
+                if instance.assigned_to != assigned_user:
+                    instance.assigned_to = assigned_user
+            except User.DoesNotExist:
+                raise serializers.ValidationError(
+                    {'assigned_to_id': _('User not found.')}
+                )
+        elif 'assigned_to_id' in self.initial_data and self.initial_data['assigned_to_id'] is None:
+            instance.assigned_to = None
+        else:
+            # Auto-assign unassigned tickets to a resolver when they perform an update
+            request = self.context.get('request')
+            if request and hasattr(request.user, 'profile') and request.user.profile.role == 'RESOLVER':
+                if instance.assigned_to is None:
+                    instance.assigned_to = request.user
+
+        # Status transition handling
+        new_status = validated_data.get('status', instance.status)
+
+        # Set started_at when status changes to IN_PROGRESS
+        if new_status == 'IN_PROGRESS' and not instance.started_at:
+            instance.started_at = timezone.now()
+
+        # Handle resolved_at
+        explicit_resolved_at = validated_data.pop('resolved_at', ...)
+        if explicit_resolved_at is not ...:
+            instance.resolved_at = explicit_resolved_at
+        elif new_status in ('RESOLVED', 'CLOSED') and instance.status not in ('RESOLVED', 'CLOSED'):
+            instance.resolved_at = timezone.now()
+        elif new_status == 'OPEN' and instance.status in ('RESOLVED', 'CLOSED'):
+            instance.resolved_at = None
+
+        # When resolving or closing, ensure assigned_to is set to the user performing the action if unset
+        if new_status in ('RESOLVED', 'CLOSED') and instance.assigned_to is None:
+            request = self.context.get('request')
+            if request and hasattr(request, 'user') and request.user.is_authenticated:
+                instance.assigned_to = request.user
+
+        old_status = instance.status
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+
+        # Process Base64 images from JSON payload
+        for idx, img_str in enumerate(uploaded_images):
+            if isinstance(img_str, str) and img_str.startswith('data:image'):
+                try:
+                    header, base64_str = img_str.split(';base64,')
+                    ext = header.split('/')[-1].split('+')[0]
+                    if ext == 'jpeg':
+                        ext = 'jpg'
+                    data = base64.b64decode(base64_str)
+                    file_name = f'attachment_{instance.attachments.count() + idx + 1}.{ext}'
+                    content_file = ContentFile(data, name=file_name)
+                    TicketAttachment.objects.create(
+                        ticket=instance,
+                        file=content_file,
+                        file_name=file_name,
+                        file_size=len(data),
+                    )
+                except Exception:
+                    pass
+
+        # Process multipart/form-data files if provided
+        request = self.context.get('request')
+        if request and hasattr(request, 'FILES'):
+            for f in request.FILES.getlist('images'):
+                TicketAttachment.objects.create(
+                    ticket=instance,
+                    file=f,
+                    file_name=f.name,
+                    file_size=f.size,
+                )
+
+        # If ticket was marked as RESOLVED or CLOSED, send Teams alert
+        if instance.status in ('RESOLVED', 'CLOSED') and old_status not in ('RESOLVED', 'CLOSED'):
+            try:
+                notify_ticket_ready_for_review(instance)
+            except Exception:
+                pass
+        elif instance.status == 'CLOSED' and old_status == 'RESOLVED':
+            try:
+                notify_ticket_ready_for_review(instance)
+            except Exception:
+                pass
+
+        return instance
+
+    def to_representation(self, instance):
+        return TicketDetailSerializer(instance, context=self.context).data

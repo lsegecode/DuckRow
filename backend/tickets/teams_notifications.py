@@ -1,0 +1,204 @@
+"""
+Teams notifications integration via Power Automate / Workflows HTTP Webhook.
+Sends Adaptive Cards to Microsoft Teams when:
+1. A new ticket is created.
+2. A ticket is marked as resolved / ready for review (para cerrar).
+"""
+
+import threading
+try:
+    import requests
+except ImportError:
+    requests = None
+
+from django.conf import settings
+
+
+def _send_payload_async(webhook_url: str, payload: dict):
+    """Worker function executed in background thread."""
+    if not requests:
+        print("[TEAMS WEBHOOK WARNING] El paquete 'requests' no está instalado en el entorno. Ejecuta 'pip install requests'.")
+        return
+
+    try:
+        headers = {'Content-Type': 'application/json'}
+        response = requests.post(webhook_url, json=payload, headers=headers, timeout=10)
+        if response.status_code in (200, 201, 202):
+            print(f"[TEAMS WEBHOOK SUCCESS] Notificación enviada correctamente a Teams (HTTP {response.status_code})")
+        else:
+            print(f"[TEAMS WEBHOOK WARNING] Teams respondió con código {response.status_code}: {response.text[:200]}")
+    except Exception as e:
+        print(f"[TEAMS WEBHOOK ERROR] Error enviando alerta a Teams: {e}")
+
+
+def _build_ticket_url(ticket_id):
+    frontend_base = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+    return f"{frontend_base}/tickets/{ticket_id}"
+
+
+def _format_user_name(user):
+    """Formats user display name cleanly for Teams Adaptive Cards."""
+    if not user:
+        return "Sin asignar"
+    full_name = f"{user.first_name} {user.last_name}".strip()
+    if full_name and user.username:
+        return f"{full_name} ({user.username})"
+    if full_name:
+        return full_name
+    return user.username or "Usuario"
+
+
+def _get_webhook_url_for_ticket(ticket) -> str:
+    """
+    Returns the appropriate Teams / Power Automate Webhook URL
+    based on the ticket's branch:
+    - BRANCH (branch office) -> TEAMS_WEBHOOK_BRANCH_URL
+    - HQ / others -> TEAMS_WEBHOOK_URL
+    """
+    branch = getattr(ticket, 'branch', 'HQ')
+    if branch == 'BRANCH':
+        return getattr(settings, 'TEAMS_WEBHOOK_BRANCH_URL', '').strip()
+    return getattr(settings, 'TEAMS_WEBHOOK_URL', '').strip()
+
+
+def notify_ticket_created(ticket):
+    """
+    Constructs an Adaptive Card (v1.4) for NEW tickets
+    and dispatches it asynchronously to Microsoft Teams / Power Automate.
+    """
+    webhook_url = _get_webhook_url_for_ticket(ticket)
+    if not webhook_url:
+        return
+
+    ticket_url = _build_ticket_url(ticket.id)
+    type_label = '🐞 Error / Bug' if ticket.ticket_type == 'BUG' else '✨ Solicitud / Mejora'
+    area_name = ticket.source_area.name if ticket.source_area else 'General'
+    creator_name = _format_user_name(ticket.created_by)
+    branch_label = 'Sucursal' if getattr(ticket, 'branch', '') == 'BRANCH' else 'Casa Central'
+
+    facts = [
+        {"title": "🏢 Sucursal:", "value": branch_label},
+        {"title": "🏷️ Tipo:", "value": type_label},
+        {"title": "📁 Área:", "value": area_name},
+        {"title": "📌 Título:", "value": ticket.title},
+        {"title": "👤 Creado por:", "value": creator_name},
+    ]
+
+    payload = {
+        "type": "message",
+        "attachments": [
+            {
+                "contentType": "application/vnd.microsoft.card.adaptive",
+                "content": {
+                    "$schema": "http://adaptivecards.io/schemas/adaptivecard-schema.json",
+                    "type": "AdaptiveCard",
+                    "version": "1.4",
+                    "body": [
+                        {
+                            "type": "TextBlock",
+                            "text": f"🦆 Nuevo Ticket - {branch_label}",
+                            "weight": "Bolder",
+                            "size": "Large",
+                            "color": "Accent"
+                        },
+                        {
+                            "type": "FactSet",
+                            "facts": facts
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": f"🔗 [Abrir ticket en DuckRow]({ticket_url})",
+                            "weight": "Bolder",
+                            "size": "Medium",
+                            "color": "Accent",
+                            "spacing": "Medium"
+                        }
+                    ],
+                    "actions": [
+                        {
+                            "type": "Action.OpenUrl",
+                            "title": "🦆 Abrir Ticket en DuckRow",
+                            "url": ticket_url
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+
+    thread = threading.Thread(target=_send_payload_async, args=(webhook_url, payload), daemon=True)
+    thread.start()
+
+
+def notify_ticket_ready_for_review(ticket):
+    """
+    Constructs an Adaptive Card (v1.4) for tickets READY FOR REVIEW / CLOSING
+    and dispatches it asynchronously to Microsoft Teams / Power Automate.
+    """
+    webhook_url = _get_webhook_url_for_ticket(ticket)
+    if not webhook_url:
+        return
+
+    ticket_url = _build_ticket_url(ticket.id)
+    type_label = '🐞 Error / Bug' if ticket.ticket_type == 'BUG' else '✨ Solicitud / Mejora'
+    area_name = ticket.source_area.name if ticket.source_area else 'General'
+    creator_name = _format_user_name(ticket.created_by)
+    resolver_name = _format_user_name(ticket.assigned_to)
+    branch_label = 'Sucursal' if getattr(ticket, 'branch', '') == 'BRANCH' else 'Casa Central'
+
+    status_title = f"🏁 Ticket Cerrado - {branch_label}" if ticket.status == 'CLOSED' else f"🏁 Ticket para Cerrar (Revisión) - {branch_label}"
+
+    facts = [
+        {"title": "🏢 Sucursal:", "value": branch_label},
+        {"title": "🏷️ Tipo:", "value": type_label},
+        {"title": "📁 Área:", "value": area_name},
+        {"title": "📌 Título:", "value": ticket.title},
+        {"title": "👤 Creado por:", "value": creator_name},
+        {"title": "🛠️ Resuelto por:", "value": resolver_name},
+    ]
+
+    payload = {
+        "type": "message",
+        "attachments": [
+            {
+                "contentType": "application/vnd.microsoft.card.adaptive",
+                "content": {
+                    "$schema": "http://adaptivecards.io/schemas/adaptivecard-schema.json",
+                    "type": "AdaptiveCard",
+                    "version": "1.4",
+                    "body": [
+                        {
+                            "type": "TextBlock",
+                            "text": status_title,
+                            "weight": "Bolder",
+                            "size": "Large",
+                            "color": "Good"
+                        },
+                        {
+                            "type": "FactSet",
+                            "facts": facts
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": f"🔗 [Abrir ticket en DuckRow]({ticket_url})",
+                            "weight": "Bolder",
+                            "size": "Medium",
+                            "color": "Accent",
+                            "spacing": "Medium"
+                        }
+                    ],
+                    "actions": [
+                        {
+                            "type": "Action.OpenUrl",
+                            "title": "🦆 Abrir Ticket en DuckRow",
+                            "url": ticket_url
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+
+    thread = threading.Thread(target=_send_payload_async, args=(webhook_url, payload), daemon=True)
+    thread.start()
+

@@ -1,0 +1,235 @@
+/**
+ * KanbanDragModal — Contextual modal for Kanban drag & drop transitions.
+ *
+ * Fully internationalized (EN / ES).
+ * Renders different UI depending on the target status and user role:
+ * - → IN_PROGRESS + SYSADMIN: resolver selector
+ * - → IN_PROGRESS + RESOLVER: self-assign confirmation
+ * - → RESOLVED / CLOSED: datetime picker + optional documentation
+ */
+
+import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { Ticket, TicketStatus, UserProfile, Role } from '../types';
+import { toLocalInputDateTime } from '../utils/dateUtils';
+import CustomDateTimePicker from './CustomDateTimePicker';
+
+interface KanbanDragModalProps {
+  ticket: Ticket;
+  targetStatus: TicketStatus;
+  role: Role;
+  currentUser: { id: number; first_name: string; username: string } | null;
+  resolvers: UserProfile[];
+  onConfirm: (payload: {
+    status: TicketStatus;
+    assigned_to_id?: number | null;
+    resolved_at?: string | null;
+    resolution_documentation?: string | null;
+  }) => void;
+  onCancel: () => void;
+  isPending: boolean;
+}
+
+export default function KanbanDragModal({
+  ticket,
+  targetStatus,
+  role,
+  currentUser,
+  resolvers,
+  onConfirm,
+  onCancel,
+  isPending,
+}: KanbanDragModalProps) {
+  const { t } = useTranslation(['tickets', 'common']);
+  const [assignedToId, setAssignedToId] = useState<number | ''>(
+    ticket.assigned_to?.id ?? ''
+  );
+  const [resolvedAt, setResolvedAt] = useState(toLocalInputDateTime(new Date()));
+  const [resDocs, setResDocs] = useState(ticket.resolution_documentation || '');
+  const [visible, setVisible] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  // Animate in
+  useEffect(() => {
+    requestAnimationFrame(() => setVisible(true));
+  }, []);
+
+  const handleCancel = () => {
+    setVisible(false);
+    setTimeout(onCancel, 220);
+  };
+
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === overlayRef.current) handleCancel();
+  };
+
+  const handleConfirm = () => {
+    const payload: Parameters<typeof onConfirm>[0] = { status: targetStatus };
+
+    if (targetStatus === 'IN_PROGRESS') {
+      if (role === 'SYSADMIN') {
+        payload.assigned_to_id = assignedToId ? Number(assignedToId) : null;
+      } else if (role === 'RESOLVER') {
+        payload.assigned_to_id = currentUser?.id ?? null;
+      }
+    }
+
+    if (targetStatus === 'RESOLVED' || targetStatus === 'CLOSED') {
+      payload.resolved_at = resolvedAt ? new Date(resolvedAt).toISOString() : null;
+      payload.resolution_documentation = resDocs || null;
+    }
+
+    onConfirm(payload);
+  };
+
+  // ── Content per scenario ─────────────────────────────────────────────────
+
+  const isMovingToProgress = targetStatus === 'IN_PROGRESS';
+  const isClosing = targetStatus === 'RESOLVED' || targetStatus === 'CLOSED';
+
+  const targetColorClass: Partial<Record<TicketStatus, string>> = {
+    IN_PROGRESS: 'text-status-in-progress',
+    RESOLVED: 'text-status-resolved',
+    CLOSED: 'text-text-muted',
+  };
+
+  return (
+    <div
+      ref={overlayRef}
+      onClick={handleOverlayClick}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{
+        background: 'rgba(11, 15, 18, 0.75)',
+        backdropFilter: 'blur(6px)',
+        transition: 'opacity 200ms ease',
+        opacity: visible ? 1 : 0,
+      }}
+    >
+      <div
+        style={{
+          transition: 'opacity 220ms ease, transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+          opacity: visible ? 1 : 0,
+          transform: visible ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.96)',
+        }}
+        className="w-full max-w-md bg-obsidian-light border border-border rounded-2xl shadow-2xl overflow-visible"
+      >
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-border/60 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-text-muted uppercase tracking-widest mb-1">
+              {t('board.modal_move_ticket')}
+            </p>
+            <h2 className="text-base font-bold text-text-primary leading-snug">
+              → <span className={targetColorClass[targetStatus] || 'text-text-primary'}>
+                {t(`status.${targetStatus}`)}
+              </span>
+            </h2>
+            <p className="text-xs text-text-muted mt-1 line-clamp-1">{ticket.title}</p>
+          </div>
+          <button
+            onClick={handleCancel}
+            className="shrink-0 w-7 h-7 rounded-lg bg-surface hover:bg-surface-hover flex items-center justify-center text-text-muted hover:text-text-primary transition-all text-sm cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 space-y-4">
+
+          {/* Scenario: → IN_PROGRESS + SYSADMIN */}
+          {isMovingToProgress && role === 'SYSADMIN' && (
+            <div>
+              <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                {t('board.modal_assign_resolver')}
+              </label>
+              <select
+                value={assignedToId}
+                onChange={(e) => setAssignedToId(e.target.value ? Number(e.target.value) : '')}
+                className="w-full px-3 py-2 bg-obsidian border border-border rounded-xl text-text-primary text-sm focus:border-teal outline-none cursor-pointer"
+              >
+                <option value="">{t('board.modal_unassigned')}</option>
+                {resolvers.map((res) => (
+                  <option key={res.user.id} value={res.user.id}>
+                    {res.user.first_name || res.user.username}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Scenario: → IN_PROGRESS + RESOLVER */}
+          {isMovingToProgress && role === 'RESOLVER' && (
+            <div className="p-4 rounded-xl bg-teal/5 border border-teal/20">
+              <p className="text-sm text-text-primary font-medium">
+                {t('board.modal_claim_question')}
+              </p>
+              <p className="text-xs text-text-muted mt-1">
+                {t('board.modal_claim_desc')}
+              </p>
+            </div>
+          )}
+
+          {/* Scenario: → RESOLVED / CLOSED */}
+          {isClosing && (
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                  {t('board.modal_resolved_at')}
+                </label>
+                <CustomDateTimePicker
+                  value={resolvedAt}
+                  max={toLocalInputDateTime(new Date())}
+                  onChange={(val) => setResolvedAt(val)}
+                  accentColor="resolved"
+                  placeholder="YYYY-MM-DD HH:mm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                  {t('board.modal_docs_label')}{' '}
+                  <span className="text-text-muted font-normal">{t('board.modal_docs_optional')}</span>
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder={t('board.modal_docs_placeholder')}
+                  value={resDocs}
+                  onChange={(e) => setResDocs(e.target.value)}
+                  className="w-full px-3 py-2 bg-obsidian border border-border rounded-xl text-text-primary text-sm focus:border-teal outline-none resize-none font-sans"
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-border/60 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={handleCancel}
+            disabled={isPending}
+            className="px-4 py-2 bg-surface hover:bg-surface-hover text-text-secondary hover:text-text-primary rounded-xl text-xs font-semibold transition-all border border-border cursor-pointer"
+          >
+            {t('common:actions.cancel')}
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={isPending}
+            className={`px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-60 cursor-pointer ${
+              targetStatus === 'RESOLVED' || targetStatus === 'CLOSED'
+                ? 'bg-status-resolved hover:bg-status-resolved/80 text-obsidian'
+                : 'bg-teal hover:bg-teal-light text-white shadow-[var(--shadow-glow-teal)]'
+            }`}
+          >
+            {isPending
+              ? '...'
+              : isMovingToProgress && role === 'RESOLVER'
+              ? t('board.modal_claim_confirm')
+              : t('board.modal_move_confirm', { status: t(`status.${targetStatus}`) })}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

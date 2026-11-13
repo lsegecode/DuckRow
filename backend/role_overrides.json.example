@@ -1,0 +1,11 @@
+{
+  "SYSADMIN": [
+    "Admin",
+    "admin"
+  ],
+  "RESOLVER": [
+    "username1",
+    "username2",
+    "username3"
+  ]
+}

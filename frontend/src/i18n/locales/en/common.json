@@ -1,0 +1,55 @@
+{
+  "app_name": "DuckRow",
+  "tagline": "Keep your work in a row.",
+  "service_desk_title": "Agile Ducks Service Desk",
+  "nav": {
+    "dashboard": "Dashboard",
+    "tickets": "Tickets",
+    "backlog": "Backlog",
+    "new_ticket": "New Ticket"
+  },
+  "roles": {
+    "SYSADMIN": "System Administrator",
+    "SYSADMIN_SHORT": "Admin",
+    "RESOLVER": "Staff / Resolver",
+    "RESOLVER_SHORT": "Resolver",
+    "CLIENT": "Client / Submitter",
+    "CLIENT_SHORT": "Client"
+  },
+  "actions": {
+    "sign_out": "Sign Out",
+    "submit": "Submit",
+    "submitting": "Submitting...",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "back": "Back",
+    "continue": "Continue",
+    "delete": "Delete",
+    "deleting": "Deleting...",
+    "modify_fields": "Modify Fields",
+    "save_updates": "Save Updates",
+    "clear_filters": "Clear all filters",
+    "clear": "Clear",
+    "previous": "Previous",
+    "next": "Next",
+    "view_all": "View all"
+  },
+  "language": {
+    "en": "English",
+    "es": "Español",
+    "switch_language": "Language"
+  },
+  "view_profile": "View profile of {{name}}",
+  "date_picker": {
+    "select_now": "Select Now",
+    "done": "Done",
+    "hour": "H:",
+    "minute": "M:",
+    "date_tab": "Date",
+    "time_tab": "Time",
+    "change_time": "Set Time →",
+    "back_to_date": "← Back to Date",
+    "time_header": "Hour (24h)"
+  }
+}

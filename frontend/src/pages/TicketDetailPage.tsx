@@ -1,0 +1,797 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import { ticketsApi } from '../api/tickets';
+import { usersApi } from '../api/users';
+import { useAuth } from '../context/AuthContext';
+import StatusBadge from '../components/StatusBadge';
+import UrgencyBadge from '../components/UrgencyBadge';
+import TicketTypeBadge from '../components/TicketTypeBadge';
+import StructuredDescription from '../components/StructuredDescription';
+import MarkdownRenderer from '../components/MarkdownRenderer';
+import { formatDateTime, formatDuration, toLocalInputDateTime } from '../utils/dateUtils';
+import CustomDateTimePicker from '../components/CustomDateTimePicker';
+import EditTicketModal from '../components/EditTicketModal';
+import type { Ticket, TicketStatus, Priority, UserProfile } from '../types';
+
+export default function TicketDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { role, user } = useAuth();
+  const { t, i18n } = useTranslation(['tickets', 'common']);
+
+  const [statusVal, setStatusVal] = useState<TicketStatus | ''>('');
+  const [priorityVal, setPriorityVal] = useState<Priority | ''>('');
+  const [assignedToVal, setAssignedToVal] = useState<number | ''>('');
+  const [estimatedResolutionVal, setEstimatedResolutionVal] = useState('');
+  const [estimatedWorkVal, setEstimatedWorkVal] = useState('');
+  const [resolvedAtVal, setResolvedAtVal] = useState('');
+  const [resDocs, setResDocs] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [isEditContextOpen, setIsEditContextOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  // Fetch ticket details
+  const { data: ticket, isLoading, isError } = useQuery<Ticket, Error>({
+    queryKey: ['ticket', id],
+    queryFn: () => ticketsApi.get(id!),
+    enabled: !!id,
+  });
+
+  useEffect(() => {
+    if (ticket) {
+      setStatusVal(ticket.status);
+      setPriorityVal(ticket.internal_priority || '');
+      setAssignedToVal(ticket.assigned_to?.id || '');
+      setEstimatedResolutionVal(toLocalInputDateTime(ticket.estimated_resolution_time));
+      setEstimatedWorkVal(ticket.estimated_work_hours || '');
+      setResolvedAtVal(toLocalInputDateTime(ticket.resolved_at));
+      setResDocs(ticket.resolution_documentation || '');
+    }
+  }, [ticket]);
+
+  // Fetch resolvers (for assign option)
+  const { data: resolvers } = useQuery({
+    queryKey: ['resolvers'],
+    queryFn: usersApi.getResolvers,
+    enabled: role === 'SYSADMIN',
+  });
+
+  const resolversList: UserProfile[] = Array.isArray(resolvers) ? resolvers : (resolvers as any)?.results || [];
+
+  const updateTicketMutation = useMutation({
+    mutationFn: (payload: any) => ticketsApi.update(id!, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', id] });
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      setIsEditing(false);
+    },
+  });
+
+  const claimTicketMutation = useMutation({
+    mutationFn: () => ticketsApi.claim(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', id] });
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['ticket-stats'] });
+    },
+  });
+
+  const deleteTicketMutation = useMutation({
+    mutationFn: () => ticketsApi.delete(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['ticket-stats'] });
+      navigate('/tickets');
+    },
+  });
+
+
+  // Always reset resolvedAtVal when status changes to RESOLVED/CLOSED (pre-fill with now)
+  const handleStatusChange = (val: TicketStatus | '') => {
+    setStatusVal(val);
+    if ((val === 'RESOLVED' || val === 'CLOSED') && ticket) {
+      // Only pre-fill if the ticket wasn't already resolved (avoid overwriting existing date)
+      const existing = toLocalInputDateTime(ticket.resolved_at);
+      setResolvedAtVal(existing || toLocalInputDateTime(new Date()));
+    }
+  };
+
+  // Live duration preview for the resolved_at picker
+  const resolvedAtPreviewDuration = (() => {
+    if (!resolvedAtVal || !ticket) return null;
+    return formatDuration(ticket.created_at, new Date(resolvedAtVal).toISOString(), i18n.language);
+  })();
+
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+        <div className="h-6 w-24 bg-surface/50 rounded animate-pulse" />
+        <div className="glass-card p-6 space-y-4">
+          <div className="h-8 w-1/2 bg-surface/50 rounded animate-pulse" />
+          <div className="h-20 w-full bg-surface/50 rounded animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  if (isError || !ticket) {
+    return (
+      <div className="max-w-4xl mx-auto text-center py-12">
+        <h3 className="text-xl font-bold text-urgency-high">{t('tickets:detail.not_found_title')}</h3>
+        <p className="text-text-secondary mt-1">{t('tickets:detail.not_found_desc')}</p>
+        <Link to="/tickets" className="mt-4 inline-block text-teal-glow hover:underline">
+          {t('tickets:detail.back_to_list')}
+        </Link>
+      </div>
+    );
+  }
+
+  const handleUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload: any = {};
+
+    if (role === 'SYSADMIN') {
+      payload.status = statusVal;
+      payload.internal_priority = priorityVal || undefined;
+      payload.assigned_to_id = assignedToVal ? Number(assignedToVal) : null;
+      payload.estimated_resolution_time = estimatedResolutionVal ? new Date(estimatedResolutionVal).toISOString() : null;
+      payload.estimated_work_hours = estimatedWorkVal || null;
+      payload.resolution_documentation = resDocs || null;
+      // Include explicit resolved_at when resolving/closing
+      if (statusVal === 'RESOLVED' || statusVal === 'CLOSED') {
+        payload.resolved_at = resolvedAtVal ? new Date(resolvedAtVal).toISOString() : null;
+      }
+    } else if (role === 'RESOLVER') {
+      payload.status = statusVal;
+      payload.internal_priority = priorityVal || undefined;
+      payload.estimated_resolution_time = estimatedResolutionVal ? new Date(estimatedResolutionVal).toISOString() : null;
+      payload.estimated_work_hours = estimatedWorkVal || null;
+      payload.resolution_documentation = resDocs || null;
+      // Include explicit resolved_at when resolving/closing
+      if (statusVal === 'RESOLVED' || statusVal === 'CLOSED') {
+        payload.resolved_at = resolvedAtVal ? new Date(resolvedAtVal).toISOString() : null;
+      }
+    }
+
+    updateTicketMutation.mutate(payload);
+  };
+
+  const handleQuickAssign = (resolverId: string) => {
+    updateTicketMutation.mutate({
+      assigned_to_id: resolverId ? Number(resolverId) : null,
+    });
+  };
+
+  const handleDelete = () => {
+    if (window.confirm(t('tickets:detail.delete_confirm'))) {
+      deleteTicketMutation.mutate();
+    }
+  };
+
+  const isCreator = ticket.created_by?.id === user?.id;
+  const isAssignedResolver = ticket.assigned_to?.id === user?.id;
+  const isUnassigned = !ticket.assigned_to;
+  const canClaim = isUnassigned && (role === 'RESOLVER' || role === 'SYSADMIN');
+  const canUpdate = role === 'SYSADMIN' || (role === 'RESOLVER' && (isAssignedResolver || isUnassigned));
+  const canDelete = role === 'SYSADMIN';
+  const canEditContext = isCreator || role === 'SYSADMIN' || (role === 'RESOLVER' && (isAssignedResolver || isUnassigned || isCreator));
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-8 animate-fade-in">
+      {/* Top action row */}
+      <div className="flex items-center justify-between">
+        <Link to="/tickets" className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition-all">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          {t('tickets:detail.back_to_list')}
+        </Link>
+
+        <div className="flex items-center gap-2.5">
+          {canEditContext && (
+            <button
+              onClick={() => setIsEditContextOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-surface hover:bg-surface-hover text-text-primary font-semibold rounded-xl text-xs border border-border transition-all cursor-pointer active:scale-[0.98]"
+            >
+              <span>✏️</span>
+              <span>{t('tickets:detail.edit_context_button', 'Editar Ticket')}</span>
+            </button>
+          )}
+
+          {canClaim && (
+            <button
+              onClick={() => claimTicketMutation.mutate()}
+              disabled={claimTicketMutation.isPending}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-teal hover:bg-teal-light text-white font-semibold rounded-xl text-xs shadow-[var(--shadow-glow-teal)] transition-all active:scale-[0.98]"
+            >
+              {claimTicketMutation.isPending ? t('tickets:detail.claiming') : t('tickets:detail.assign_to_me')}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Main Content Area (Left side) */}
+        <div className="lg:col-span-8 space-y-6">
+          <div className="glass-card p-6 space-y-6">
+            {/* Header info */}
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/50 pb-5">
+              <div>
+                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                  <TicketTypeBadge type={ticket.ticket_type || 'BUG'} />
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                    ticket.branch === 'BRANCH'
+                      ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                      : 'bg-teal/15 text-teal-glow border-teal/30'
+                  }`}>
+                    <span>🏢</span>
+                    <span>{ticket.branch === 'BRANCH' ? t('tickets:branch.branch') : t('tickets:branch.hq')}</span>
+                  </span>
+                  <span className="text-xs text-text-muted font-mono">{ticket.id}</span>
+                </div>
+                <h1 className="text-2xl font-bold text-text-primary">{ticket.title}</h1>
+                <p className="text-xs text-text-secondary mt-1.5">
+                  {t('tickets:detail.submitted_by')}{' '}
+                  <Link
+                    to={`/users/${ticket.created_by.id}`}
+                    className="font-semibold text-text-primary hover:text-duck-yellow hover:underline transition-colors"
+                    title="Ver perfil del usuario"
+                  >
+                    {ticket.created_by.first_name || ticket.created_by.username}
+                  </Link> &middot; {formatDateTime(ticket.created_at)}
+                </p>
+              </div>
+              <div className="flex gap-2 items-center">
+                <UrgencyBadge level={ticket.urgency} />
+                {role !== 'CLIENT' && ticket.internal_priority && (
+                  <UrgencyBadge level={ticket.internal_priority} type="priority" />
+                )}
+                <StatusBadge status={ticket.status} />
+              </div>
+            </div>
+
+            {/* Description broken into structured sections */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">
+                  {t('tickets:detail.description_heading')}
+                </h3>
+                {canEditContext && (
+                  <button
+                    onClick={() => setIsEditContextOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-teal/10 hover:bg-teal/20 text-teal-glow text-xs font-semibold rounded-lg border border-teal/20 transition-all cursor-pointer"
+                  >
+                    <span>✏️</span>
+                    <span>{t('tickets:detail.edit_context_button', 'Editar contexto')}</span>
+                  </button>
+                )}
+              </div>
+              <StructuredDescription description={ticket.description} />
+            </div>
+
+            {/* Attached Screenshots Gallery */}
+            {ticket.attachments && ticket.attachments.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">
+                  {t('tickets:detail.attachments_heading')} ({ticket.attachments.length})
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {ticket.attachments.map((att) => (
+                    <div
+                      key={att.id}
+                      onClick={() => setPreviewImage(formatImageUrl(att.url))}
+                      className="group relative rounded-xl overflow-hidden border border-border bg-obsidian aspect-video cursor-pointer hover:border-teal transition-all shadow-sm"
+                    >
+                      <img
+                        src={formatImageUrl(att.url)}
+                        alt={att.file_name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2.5">
+                        <span className="text-[11px] text-white truncate font-medium">{att.file_name || 'Screenshot'}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Resolution Documentation */}
+            {(ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' || ticket.resolution_documentation) && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-status-resolved uppercase tracking-wider">{t('tickets:detail.resolution_docs_heading')}</h3>
+                <div className="bg-status-resolved/5 p-5 rounded-xl border border-status-resolved/20 text-text-primary text-sm leading-relaxed">
+                  {ticket.resolution_documentation ? (
+                    <MarkdownRenderer content={ticket.resolution_documentation} />
+                  ) : (
+                    <span className="text-text-muted italic">{t('tickets:detail.no_resolution_docs')}</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Edit Panel (if authorized Resolver/Sysadmin) */}
+          {canUpdate && (
+            <div className="glass-card p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-border/50 pb-3">
+                <h3 className="text-md font-semibold text-text-primary">{t('tickets:detail.update_action_heading')}</h3>
+                {!isEditing && (
+                  <button
+                    onClick={() => {
+                      setStatusVal(ticket.status);
+                      setPriorityVal(ticket.internal_priority || '');
+                      setAssignedToVal(ticket.assigned_to?.id || '');
+                      setEstimatedResolutionVal(toLocalInputDateTime(ticket.estimated_resolution_time));
+                      setEstimatedWorkVal(ticket.estimated_work_hours || '');
+                      setResolvedAtVal(toLocalInputDateTime(ticket.resolved_at));
+                      setResDocs(ticket.resolution_documentation || '');
+                      setIsEditing(true);
+                    }}
+                    className="px-3.5 py-1.5 bg-teal/15 hover:bg-teal/25 text-teal-glow font-semibold rounded-lg text-xs transition-all border border-teal/20"
+                  >
+                    {t('common:actions.modify_fields')}
+                  </button>
+                )}
+              </div>
+
+              {isEditing ? (
+                <form onSubmit={handleUpdate} className="space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Priority Selector for SYSADMIN & RESOLVER */}
+                    {(role === 'SYSADMIN' || role === 'RESOLVER') && (
+                      <div>
+                        <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                          {t('tickets:table.priority')}
+                        </label>
+                        <select
+                          value={priorityVal}
+                          onChange={(e) => setPriorityVal((e.target.value as Priority) || '')}
+                          className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none cursor-pointer"
+                        >
+                          <option value="">{t('tickets:table.unassigned')}</option>
+                          <option value="LOW">{t('tickets:priority.LOW')}</option>
+                          <option value="MEDIUM">{t('tickets:priority.MEDIUM')}</option>
+                          <option value="HIGH">{t('tickets:priority.HIGH')}</option>
+                          <option value="CRITICAL">{t('tickets:priority.CRITICAL')}</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Status selector — SYSADMIN & RESOLVER, restricted to valid workflow steps */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                          {t('tickets:table.status')}
+                        </label>
+                        {statusVal === 'OPEN' && !assignedToVal && !ticket.assigned_to && (
+                          <span className="text-[11px] text-urgency-high font-medium">
+                            ⚠️ Requiere asignar responsable para iniciar
+                          </span>
+                        )}
+                      </div>
+                      <select
+                        value={statusVal}
+                        onChange={(e) => handleStatusChange((e.target.value as TicketStatus) || '')}
+                        className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none cursor-pointer"
+                      >
+                        {/* Current state is always an option */}
+                        <option value={ticket.status}>{t(`tickets:status.${ticket.status}`)}</option>
+
+                        {/* OPEN can only advance to IN_PROGRESS (if assigned) */}
+                        {ticket.status === 'OPEN' && (
+                          <option
+                            value="IN_PROGRESS"
+                            disabled={!assignedToVal && !ticket.assigned_to}
+                          >
+                            {t('tickets:status.IN_PROGRESS')} {!assignedToVal && !ticket.assigned_to ? '(Asignar primero)' : ''}
+                          </option>
+                        )}
+
+                        {/* IN_PROGRESS can go back to OPEN or advance to RESOLVED */}
+                        {ticket.status === 'IN_PROGRESS' && (
+                          <>
+                            <option value="OPEN">{t('tickets:status.OPEN')}</option>
+                            <option value="RESOLVED">{t('tickets:status.RESOLVED')}</option>
+                          </>
+                        )}
+
+                        {/* RESOLVED can reopen to IN_PROGRESS or advance to CLOSED */}
+                        {ticket.status === 'RESOLVED' && (
+                          <>
+                            <option value="IN_PROGRESS">{t('tickets:status.IN_PROGRESS')}</option>
+                            <option value="CLOSED">{t('tickets:status.CLOSED')}</option>
+                          </>
+                        )}
+
+                        {/* CLOSED can only be reopened by Sysadmin/Resolver if needed */}
+                        {ticket.status === 'CLOSED' && (
+                          <option value="IN_PROGRESS">{t('tickets:status.IN_PROGRESS')}</option>
+                        )}
+                      </select>
+                    </div>
+
+                    {/* Sysadmin Field (Assign) */}
+                    {role === 'SYSADMIN' && (
+                      <div>
+                        <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                          {t('tickets:table.assigned')}
+                        </label>
+                        <select
+                          value={assignedToVal}
+                          onChange={(e) => setAssignedToVal(e.target.value ? Number(e.target.value) : '')}
+                          className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none cursor-pointer"
+                        >
+                          <option value="">{t('tickets:table.unassigned')}</option>
+                          {resolversList.map((r) => (
+                            <option key={r.user.id} value={r.user.id}>
+                              {r.user.first_name || r.user.username}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dual Estimation: Expected Delivery Date & Estimated Work Effort */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Expected Delivery Date (External Target) */}
+                    <div className="p-4 rounded-xl bg-obsidian/70 border border-border/80 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                          {t('tickets:detail.estimated_delivery_label')}
+                        </label>
+                        {estimatedResolutionVal && (
+                          <button
+                            type="button"
+                            onClick={() => setEstimatedResolutionVal('')}
+                            className="px-2 py-0.5 rounded-md bg-urgency-high/15 hover:bg-urgency-high/25 text-urgency-high border border-urgency-high/30 text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                          >
+                            ✕ {t('common:actions.clear')}
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-text-muted">{t('tickets:detail.estimated_delivery_hint')}</p>
+
+                      {/* Quick Target Presets */}
+                      <div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[1, 2, 4, 8, 24, 48].map((hrs) => (
+                            <button
+                              key={hrs}
+                              type="button"
+                              onClick={() => {
+                                const target = new Date(Date.now() + hrs * 3600 * 1000);
+                                setEstimatedResolutionVal(toLocalInputDateTime(target));
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-surface hover:bg-teal/20 hover:text-teal-glow text-text-secondary border border-border text-xs font-semibold transition-all cursor-pointer active:scale-95"
+                            >
+                              +{hrs >= 24 ? `${hrs / 24}d` : `${hrs}h`}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <CustomDateTimePicker
+                        value={estimatedResolutionVal}
+                        onChange={(val) => setEstimatedResolutionVal(val)}
+                        accentColor="teal"
+                        placeholder="dd/mm/aaaa hh:mm"
+                      />
+                    </div>
+
+                    {/* Estimated Active Work Effort (Internal Effort) */}
+                    <div className="p-4 rounded-xl bg-obsidian/70 border border-border/80 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                          {t('tickets:detail.estimated_work_label')}
+                        </label>
+                        {estimatedWorkVal && (
+                          <button
+                            type="button"
+                            onClick={() => setEstimatedWorkVal('')}
+                            className="px-2 py-0.5 rounded-md bg-urgency-high/15 hover:bg-urgency-high/25 text-urgency-high border border-urgency-high/30 text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                          >
+                            ✕ {t('common:actions.clear')}
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-text-muted">{t('tickets:detail.estimated_work_hint')}</p>
+
+                      {/* Quick Work Effort Presets */}
+                      <div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {['15m', '30m', '1h', '2h', '4h', '8h'].map((eff) => (
+                            <button
+                              key={eff}
+                              type="button"
+                              onClick={() => setEstimatedWorkVal(eff)}
+                              className={`px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
+                                estimatedWorkVal === eff
+                                  ? 'bg-teal text-white border-teal'
+                                  : 'bg-surface hover:bg-teal/20 hover:text-teal-glow text-text-secondary border-border'
+                              }`}
+                            >
+                              {eff}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <input
+                        type="text"
+                        placeholder="e.g. 1h 30m"
+                        value={estimatedWorkVal}
+                        onChange={(e) => setEstimatedWorkVal(e.target.value)}
+                        className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Resolution Docs Field */}
+                  {(statusVal === 'RESOLVED' || statusVal === 'CLOSED') && (
+                    <>
+                      {/* Resolved At — backdatable datetime picker */}
+                      <div className="p-4 rounded-xl bg-status-resolved/5 border border-status-resolved/20 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-xs font-semibold text-status-resolved uppercase tracking-wider">
+                            {t('tickets:detail.resolved_at_label')}
+                          </label>
+                          {resolvedAtVal && (
+                            <button
+                              type="button"
+                              onClick={() => setResolvedAtVal('')}
+                              className="px-2 py-0.5 rounded-md bg-urgency-high/15 hover:bg-urgency-high/25 text-urgency-high border border-urgency-high/30 text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                            >
+                              ✕ {t('common:actions.clear')}
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-text-muted">{t('tickets:detail.resolved_at_hint')}</p>
+                        <CustomDateTimePicker
+                          value={resolvedAtVal}
+                          max={toLocalInputDateTime(new Date())}
+                          onChange={(val) => setResolvedAtVal(val)}
+                          accentColor="resolved"
+                          placeholder="dd/mm/aaaa hh:mm"
+                        />
+                        {resolvedAtPreviewDuration && (
+                          <p className="text-xs font-semibold text-status-resolved">
+                            {t('tickets:detail.resolution_duration_preview', { duration: resolvedAtPreviewDuration })}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Resolution documentation */}
+                      <div>
+                        <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+                          {t('tickets:detail.resolution_docs_heading')}
+                        </label>
+                        <textarea
+                          rows={4}
+                          placeholder={t('tickets:detail.resolution_placeholder')}
+                          value={resDocs}
+                          onChange={(e) => setResDocs(e.target.value)}
+                          className="w-full px-3 py-2 bg-obsidian border border-border rounded-lg text-text-primary text-sm focus:border-teal outline-none resize-none"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Edit buttons */}
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(false)}
+                      className="px-4 py-2 bg-surface hover:bg-surface-hover text-text-secondary hover:text-text-primary rounded-lg text-xs font-semibold transition-all border border-border"
+                    >
+                      {t('common:actions.cancel')}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={updateTicketMutation.isPending}
+                      className="px-4 py-2 bg-teal hover:bg-teal-light text-white rounded-lg text-xs font-semibold transition-all"
+                    >
+                      {updateTicketMutation.isPending ? t('common:actions.saving') : t('common:actions.save_updates')}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="text-xs text-text-muted">
+                  {t('tickets:detail.modify_hint')}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar Info Panel (Right side) - Detailed Lifecycle & Timestamps */}
+        <div className="lg:col-span-4 space-y-6">
+          <div className="glass-card p-6 space-y-5">
+            <h3 className="text-sm font-semibold text-text-primary border-b border-border/50 pb-2">
+              {t('tickets:detail.metadata_heading')}
+            </h3>
+
+            <div className="space-y-4 text-sm">
+              {/* Type */}
+              <div>
+                <span className="text-xs text-text-secondary block">{t('tickets:table.type')}</span>
+                <div className="mt-1">
+                  <TicketTypeBadge type={ticket.ticket_type || 'BUG'} />
+                </div>
+              </div>
+
+              {/* Department */}
+              <div>
+                <span className="text-xs text-text-secondary block">{t('tickets:detail.source_department')}</span>
+                <span className="font-medium text-text-primary mt-0.5 block">{ticket.source_area.name}</span>
+              </div>
+
+              {/* Staff Assignment & Admin Quick Assign */}
+              {role !== 'CLIENT' && (
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-text-secondary block">{t('tickets:detail.assigned_staff')}</span>
+                    {canClaim && (
+                      <button
+                        onClick={() => claimTicketMutation.mutate()}
+                        disabled={claimTicketMutation.isPending}
+                        className="text-[11px] text-teal-glow hover:underline font-semibold"
+                      >
+                        {t('tickets:detail.assign_to_me')}
+                      </button>
+                    )}
+                  </div>
+
+                  {role === 'SYSADMIN' ? (
+                    <div className="mt-1">
+                      <select
+                        value={ticket.assigned_to?.id || ''}
+                        onChange={(e) => handleQuickAssign(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-obsidian border border-border rounded-lg text-text-primary text-xs focus:border-teal outline-none cursor-pointer"
+                      >
+                        <option value="">{t('tickets:table.unassigned')}</option>
+                        {resolversList.map((r) => (
+                          <option key={r.user.id} value={r.user.id}>
+                            {r.user.first_name || r.user.username}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <span className="font-medium text-text-primary mt-0.5 block">
+                      {ticket.assigned_to ? (
+                        <Link
+                          to={`/users/${ticket.assigned_to.id}`}
+                          className="hover:text-duck-yellow hover:underline transition-colors"
+                          title="Ver perfil del usuario"
+                        >
+                          {ticket.assigned_to.first_name || ticket.assigned_to.username}
+                        </Link>
+                      ) : (
+                        <span className="text-text-muted italic">{t('tickets:table.unassigned')}</span>
+                      )}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Divider for Timestamps */}
+              <div className="pt-2 border-t border-border/40 space-y-3">
+                {/* 1. Fecha de Creación */}
+                <div>
+                  <span className="text-xs text-text-secondary flex items-center gap-1.5 font-medium">
+                    <span>📅</span>
+                    <span>Fecha de Creación</span>
+                  </span>
+                  <span className="font-medium text-text-primary mt-0.5 block text-xs">
+                    {formatDateTime(ticket.created_at)}
+                  </span>
+                </div>
+
+                {/* 2. Fecha de Inicio (En Progreso) */}
+                <div>
+                  <span className="text-xs text-text-secondary flex items-center gap-1.5 font-medium">
+                    <span>🚀</span>
+                    <span>Fecha de Inicio (En Progreso)</span>
+                  </span>
+                  <span className="font-medium text-text-primary mt-0.5 block text-xs">
+                    {ticket.started_at ? (
+                      formatDateTime(ticket.started_at)
+                    ) : (
+                      <span className="text-text-muted italic">Pendiente de iniciar</span>
+                    )}
+                  </span>
+                </div>
+
+                {/* 3. Fecha de Entrega / Resolución */}
+                <div>
+                  <span className="text-xs text-text-secondary flex items-center gap-1.5 font-medium">
+                    <span>🏁</span>
+                    <span>Fecha de Entrega</span>
+                  </span>
+                  <span className="font-medium text-text-primary mt-0.5 block text-xs">
+                    {ticket.resolved_at ? (
+                      formatDateTime(ticket.resolved_at)
+                    ) : (
+                      <span className="text-text-muted italic">Pendiente de entrega</span>
+                    )}
+                  </span>
+                </div>
+
+                {/* Última actualización */}
+                <div className="pt-1 border-t border-border/20">
+                  <span className="text-[11px] text-text-muted block">
+                    Última actualización: {formatDateTime(ticket.updated_at)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions for admins */}
+            {canDelete && (
+              <div className="pt-4 border-t border-border/50">
+                <button
+                  onClick={handleDelete}
+                  disabled={deleteTicketMutation.isPending}
+                  className="w-full py-2.5 bg-urgency-high/15 hover:bg-urgency-high/25 text-urgency-high font-semibold rounded-lg text-xs transition-all border border-urgency-high/20 active:scale-[0.98]"
+                >
+                  {deleteTicketMutation.isPending ? t('common:actions.deleting') : t('tickets:detail.delete_ticket')}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Edit Ticket Context Modal */}
+      {canEditContext && (
+        <EditTicketModal
+          ticket={ticket}
+          isOpen={isEditContextOpen}
+          onClose={() => setIsEditContextOpen(false)}
+          onSave={(payload) => {
+            updateTicketMutation.mutate(payload, {
+              onSuccess: () => {
+                setIsEditContextOpen(false);
+              },
+            });
+          }}
+          isPending={updateTicketMutation.isPending}
+        />
+      )}
+
+      {/* Lightbox Modal */}
+      {previewImage && (
+        <div
+          onClick={() => setPreviewImage(null)}
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in cursor-pointer"
+        >
+          <div className="relative max-w-5xl max-h-[90vh]">
+            <img src={previewImage} alt="Attachment Full Size" className="max-w-full max-h-[85vh] rounded-xl object-contain shadow-2xl border border-border" />
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-obsidian border border-border text-white flex items-center justify-center text-sm font-bold shadow-lg hover:bg-surface"
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Helpers ──
+
+function formatImageUrl(url?: string): string {
+  if (!url) return '';
+  // Convert absolute localhost/127.0.0.1 URLs to relative paths so they go through Vite proxy
+  return url.replace(/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?/, '');
+}
+
+
